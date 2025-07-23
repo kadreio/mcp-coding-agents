@@ -300,16 +300,27 @@ function createMCPServer(): Server {
             
             // Send notification if available
             if (sendNotification) {
-              await sendNotification({
-                method: "notifications/message",
-                params: {
-                  type: 'claude_code_message',
-                  sessionId,
-                  message,
-                  timestamp: new Date().toISOString(),
-                  sequence
-                }
-              });
+              console.log(`[claude_code_query] Sending notification for message ${sequence}`);
+              try {
+                await sendNotification({
+                  method: "notifications/message",
+                  params: {
+                    level: "info",
+                    data: JSON.stringify({
+                      type: 'claude_code_message',
+                      sessionId,
+                      message,
+                      timestamp: new Date().toISOString(),
+                      sequence
+                    })
+                  }
+                });
+                console.log(`[claude_code_query] Notification sent successfully`);
+              } catch (error) {
+                console.error(`[claude_code_query] Failed to send notification:`, error);
+              }
+            } else {
+              console.log(`[claude_code_query] No sendNotification function available - client may not support SSE`);
             }
             
             console.log(`[claude_code_query] Message ${sequence} (${message.type}):`, {

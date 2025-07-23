@@ -114,11 +114,14 @@ Minimal filtering - only remove sensitive data like API keys in errors.
 {
   method: "notifications/message",
   params: {
-    type: 'claude_code_message',
-    sessionId: string,
-    message: SDKMessage, // The actual Claude Code message
-    timestamp: string,
-    sequence: number // Message sequence number
+    level: "info",
+    data: JSON.stringify({
+      type: 'claude_code_message',
+      sessionId: string,
+      message: SDKMessage, // The actual Claude Code message
+      timestamp: string,
+      sequence: number // Message sequence number
+    })
   }
 }
 ```
