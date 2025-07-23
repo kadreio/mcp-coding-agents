@@ -1,0 +1,68 @@
+{
+  "name": "Go Development Container",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "mcp-claude-code",
+  "workspaceFolder": "/workspaces/siai",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/terraform:1.4.0": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "ms-azuretools.vscode-docker",
+        "hashicorp.terraform",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-playwright.playwright",
+        "ms-vscode.vscode-json",
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "go.toolsManagement.autoUpdate": true,
+        "go.toolsManagement.checkForUpdates": "local",
+        "go.gopath": "/go",
+        "go.goroot": "/usr/local/go",
+        "go.alternateTools": {},
+        "go.languageServerExperimentalFeatures": {
+          "diagnosticsDelay": "250ms",
+          "documentLink": true
+        },
+        "go.lintOnSave": "package",
+        "go.vetOnSave": "package",
+        "go.formatTool": "goimports",
+        "go.useCodeSnippetsOnFunctionSuggest": true,
+        "go.inferGopath": true,
+        "go.gocodeAutoBuild": true,
+        "go.installDependenciesWhenBuilding": true,
+        "go.enableCodeLens": {
+          "runtest": true
+        },
+        "go.testFlags": ["-v"],
+        "go.testTimeout": "30s",
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": "explicit"
+        },
+        "files.eol": "\n",
+        "files.exclude": {
+          "**/node_modules": true,
+          "**/tmp": true,
+          "**/bin": true,
+          "**/*.log": true,
+          "**/.git": true
+        },
+        "editor.formatOnSave": true,
+        "editor.formatOnPaste": true,
+        "go.lintTool": "golangci-lint",
+        "go.lintFlags": ["--fast"]
+      }
+    }
+  },
+  "postCreateCommand": ".devcontainer/setup-shell.sh",
+  "postStartCommand": ".devcontainer/init-grafana-dashboards.sh",
+  "remoteUser": "vscode",
+  "forwardPorts": [5432, 6379, 4222, 8222, 3100, 12345, 3000, 3200, 4317, 7878, 5173, 8080]
+}

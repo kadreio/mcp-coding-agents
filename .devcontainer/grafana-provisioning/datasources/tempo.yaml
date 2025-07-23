@@ -1,0 +1,35 @@
+apiVersion: 1
+
+datasources:
+  - name: Tempo
+    type: tempo
+    access: proxy
+    url: http://localhost:3200
+    uid: tempo
+    isDefault: false
+    jsonData:
+      httpMethod: GET
+      serviceMap:
+        datasourceUid: ''
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false
+      lokiSearch:
+        datasourceUid: 'loki'
+      tracesToLogsV2:
+        datasourceUid: 'loki'
+        spanStartTimeShift: '-1m'
+        spanEndTimeShift: '1m'
+        filterByTraceID: true
+        filterBySpanID: false
+        customQuery: false
+      tracesToMetrics:
+        datasourceUid: ''
+        spanStartTimeShift: '-1m'
+        spanEndTimeShift: '1m'
+        queries:
+          - name: 'Request rate'
+            query: 'sum(rate(http_requests_total{$$__tags}[5m]))'
+          - name: 'Request duration'
+            query: 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{$$__tags}[5m])) by (le))'

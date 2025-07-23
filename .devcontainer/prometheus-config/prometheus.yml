@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'siai-api'
+    static_configs:
+      - targets: ['localhost:7878']
+        labels:
+          service: 'siai-api'
+  
+  - job_name: 'siai-worker'
+    static_configs:
+      - targets: ['localhost:7879']
+        labels:
+          service: 'siai-worker'
+  
+  - job_name: 'nats'
+    static_configs:
+      - targets: ['localhost:8222']
+    metrics_path: '/metrics'

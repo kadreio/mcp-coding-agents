@@ -1,0 +1,138 @@
+{
+  "title": "Chat Messages Status",
+  "uid": "chat-messages",
+  "version": 1,
+    "panels": [
+      {
+        "datasource": {
+          "type": "postgres",
+          "uid": "${postgres}"
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "id": 1,
+        "targets": [
+          {
+            "datasource": {
+              "type": "postgres",
+              "uid": "${postgres}"
+            },
+            "format": "table",
+            "rawSql": "SELECT \n  m.id,\n  m.run_id,\n  m.sender,\n  LEFT(m.content, 50) as content_preview,\n  m.processing_status,\n  m.created_at,\n  m.processing_completed_at,\n  CASE \n    WHEN m.processing_completed_at IS NOT NULL THEN \n      EXTRACT(EPOCH FROM (m.processing_completed_at - m.created_at)) \n    ELSE NULL \n  END as processing_time_seconds\nFROM messages m\nORDER BY m.created_at DESC\nLIMIT 100",
+            "refId": "A"
+          }
+        ],
+        "title": "Recent Messages",
+        "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "postgres",
+          "uid": "${postgres}"
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "id": 2,
+        "targets": [
+          {
+            "datasource": {
+              "type": "postgres",
+              "uid": "${postgres}"
+            },
+            "format": "table",
+            "rawSql": "SELECT \n  processing_status,\n  COUNT(*) as count\nFROM messages\nGROUP BY processing_status",
+            "refId": "A"
+          }
+        ],
+        "title": "Message Status Distribution",
+        "type": "piechart"
+      },
+      {
+        "datasource": {
+          "type": "postgres",
+          "uid": "${postgres}"
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        },
+        "id": 3,
+        "targets": [
+          {
+            "datasource": {
+              "type": "postgres",
+              "uid": "${postgres}"
+            },
+            "format": "table",
+            "rawSql": "SELECT \n  mo.id,\n  mo.message_id,\n  mo.status,\n  mo.attempts,\n  mo.error_message,\n  mo.created_at,\n  mo.next_retry_at\nFROM message_outbox mo\nWHERE mo.status IN ('pending', 'failed')\nORDER BY mo.created_at DESC",
+            "refId": "A"
+          }
+        ],
+        "title": "Pending Outbox Messages",
+        "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "postgres",
+          "uid": "${postgres}"
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        },
+        "id": 4,
+        "targets": [
+          {
+            "datasource": {
+              "type": "postgres",
+              "uid": "${postgres}"
+            },
+            "format": "time_series",
+            "rawSql": "SELECT\n  $__timeGroupAlias(created_at, 1m),\n  COUNT(*) as messages_per_minute\nFROM messages\nWHERE $__timeFilter(created_at)\nGROUP BY 1\nORDER BY 1",
+            "refId": "A"
+          }
+        ],
+        "title": "Message Rate",
+        "type": "timeseries"
+      }
+    ],
+    "refresh": "5s",
+    "schemaVersion": 37,
+    "templating": {
+      "list": [
+        {
+          "current": {
+            "selected": false,
+            "text": "PostgreSQL",
+            "value": "PostgreSQL"
+          },
+          "hide": 0,
+          "includeAll": false,
+          "multi": false,
+          "name": "postgres",
+          "options": [],
+          "query": "postgres",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "type": "datasource"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-15m",
+      "to": "now"
+    }
+}
