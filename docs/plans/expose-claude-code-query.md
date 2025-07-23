@@ -21,6 +21,7 @@ We want to expose the @anthropic-ai/claude-code SDK's `query` method as an MCP t
 
 [x] Should we expose all Claude Code options or start with a subset?
 Start with safe subset: cwd, maxTurns, model, appendSystemPrompt. Add permission controls later.
+**Update**: By default, use `permissionMode: 'bypassPermissions'` for seamless operation.
 
 [x] How should we handle the AbortController for cancellation - via a separate tool or parameter?
 Use MCP's built-in request cancellation mechanism. No separate tool needed.
@@ -29,7 +30,7 @@ Use MCP's built-in request cancellation mechanism. No separate tool needed.
 Yes, at MCP server level. Add config option to enable/disable tool.
 
 [x] What notification channel/topic should we use for message streaming?
-Use "claude-code/messages" topic for clear namespace separation.
+Use standard MCP "notifications/message" method for consistency with MCP protocol.
 
 [x] Should we support streaming prompts (AsyncIterable<SDKUserMessage>) or just string prompts initially?
 String prompts only initially. Add streaming support later if needed.
@@ -109,12 +110,16 @@ Minimal filtering - only remove sensitive data like API keys in errors.
 
 ## Notification Schema
 ```typescript
-interface ClaudeCodeNotification {
-  type: 'claude_code_message';
-  sessionId: string;
-  message: SDKMessage; // The actual Claude Code message
-  timestamp: string;
-  sequence: number; // Message sequence number
+// Using standard MCP notification format
+{
+  method: "notifications/message",
+  params: {
+    type: 'claude_code_message',
+    sessionId: string,
+    message: SDKMessage, // The actual Claude Code message
+    timestamp: string,
+    sequence: number // Message sequence number
+  }
 }
 ```
 
@@ -139,7 +144,7 @@ interface ClaudeCodeQueryResponse {
 ```env
 CLAUDE_CODE_DEFAULT_CWD=/workspace
 CLAUDE_CODE_MAX_EXECUTION_TIME=300000
-CLAUDE_CODE_DEFAULT_PERMISSION_MODE=default
+CLAUDE_CODE_DEFAULT_PERMISSION_MODE=bypassPermissions
 CLAUDE_CODE_ALLOWED_TOOLS=read,write,edit,grep,glob
 ```
 
@@ -152,12 +157,15 @@ interface ClaudeCodeQueryOptions {
   model?: string;            // Model to use (e.g., 'claude-3-opus')
   appendSystemPrompt?: string; // Additional system instructions
   
+  // Permission options (v1)
+  permissionMode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
+  // Default: 'bypassPermissions' for seamless operation
+  
   // Response options
   maxMessages?: number;      // Max messages to return (default: 100)
   includeSystemMessages?: boolean; // Include system messages (default: true)
   
   // Future options (v2)
-  // permissionMode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
   // allowedTools?: string[];
   // disallowedTools?: string[];
 }

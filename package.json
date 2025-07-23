@@ -21,6 +21,7 @@
   "keywords": [],
   "description": "",
   "dependencies": {
+    "@anthropic-ai/claude-code": "^1.0.58",
     "@modelcontextprotocol/sdk": "^1.15.1",
     "dotenv": "^17.2.0",
     "express": "^5.1.0"
