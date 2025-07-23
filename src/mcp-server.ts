@@ -11,6 +11,7 @@ import {
 import { execSync } from 'child_process';
 import { randomUUID } from 'crypto';
 import { query as claudeQuery, type SDKMessage } from '@anthropic-ai/claude-code';
+import { claudeCodeConfig } from './config/claude-code.js';
 
 // Create server instance
 const server = new Server(
@@ -29,8 +30,7 @@ const server = new Server(
 
 // Define available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: [
+  const tools: any[] = [
       {
         name: 'calculate_bmi',
         description: 'Calculate Body Mass Index (BMI)',
@@ -64,7 +64,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ['command'],
         },
       },
-      {
+    ];
+    
+    // Conditionally add Claude Code tool if enabled
+    if (claudeCodeConfig.enabled) {
+      tools.push({
         name: 'claude_code_query',
         description: 'Execute a Claude Code query with real-time message streaming',
         inputSchema: {
@@ -80,15 +84,15 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               properties: {
                 cwd: { 
                   type: 'string', 
-                  description: 'Working directory for Claude Code (default: current directory)' 
+                  description: `Working directory for Claude Code (default: ${claudeCodeConfig.defaults.cwd})` 
                 },
                 maxTurns: { 
                   type: 'number', 
-                  description: 'Maximum conversation turns' 
+                  description: `Maximum conversation turns${claudeCodeConfig.defaults.maxTurns ? ` (default: ${claudeCodeConfig.defaults.maxTurns})` : ''}` 
                 },
                 model: { 
                   type: 'string', 
-                  description: 'Model to use (e.g., claude-3-opus)' 
+                  description: `Model to use${claudeCodeConfig.defaults.model ? ` (default: ${claudeCodeConfig.defaults.model})` : ' (e.g., claude-3-opus)'}` 
                 },
                 appendSystemPrompt: { 
                   type: 'string', 
@@ -97,24 +101,25 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                 permissionMode: {
                   type: 'string',
                   enum: ['default', 'acceptEdits', 'bypassPermissions', 'plan'],
-                  description: 'Permission mode (default: bypassPermissions)'
+                  description: `Permission mode (default: ${claudeCodeConfig.defaults.permissionMode})`
                 },
                 maxMessages: {
                   type: 'number',
-                  description: 'Maximum messages to return in response (default: 100)'
+                  description: `Maximum messages to return in response (default: ${claudeCodeConfig.defaults.maxMessages})`
                 },
                 includeSystemMessages: {
                   type: 'boolean',
-                  description: 'Include system messages in response (default: true)'
+                  description: `Include system messages in response (default: ${claudeCodeConfig.defaults.includeSystemMessages})`
                 }
               }
             }
           },
           required: ['prompt'],
         },
-      },
-    ],
-  };
+      });
+    }
+    
+    return { tools };
 });
 
 // Handle tool calls
@@ -159,23 +164,31 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
     }
     
     case 'claude_code_query': {
-      const prompt = args?.prompt as string;
-      const options = args?.options as any || {};
+      // Check if tool is enabled
+      if (!claudeCodeConfig.enabled) {
+        throw new Error('Claude Code tool is disabled');
+      }
       
-      // Set default options
+      const prompt = args?.prompt as string;
+      const requestOptions = args?.options as any || {};
+      
+      // Merge request options with configured defaults
+      const mergedOptions = claudeCodeConfig.mergeOptions(requestOptions);
+      
+      // Set up query options
       const queryOptions = {
-        cwd: options.cwd || process.cwd(),
-        permissionMode: options.permissionMode || 'bypassPermissions',
-        maxTurns: options.maxTurns,
-        model: options.model,
-        appendSystemPrompt: options.appendSystemPrompt,
+        cwd: mergedOptions.cwd,
+        permissionMode: mergedOptions.permissionMode,
+        maxTurns: mergedOptions.maxTurns,
+        model: mergedOptions.model,
+        appendSystemPrompt: requestOptions.appendSystemPrompt, // This one doesn't have a default
         // Add AbortController for cancellation support
         abortController: new AbortController()
       };
       
       // Response configuration
-      const maxMessages = options.maxMessages || 100;
-      const includeSystemMessages = options.includeSystemMessages !== false;
+      const maxMessages = mergedOptions.maxMessages;
+      const includeSystemMessages = mergedOptions.includeSystemMessages;
       
       // Track execution
       const sessionId = randomUUID();

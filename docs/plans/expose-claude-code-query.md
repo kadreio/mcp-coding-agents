@@ -79,7 +79,7 @@ Minimal filtering - only remove sensitive data like API keys in errors.
   - Error scenario testing
   - Notification emission testing
 
-[ ] Add configuration support
+[x] Add configuration support
   - Environment variables for default options
   - Per-request option overrides
   - Security policy configuration
@@ -210,12 +210,29 @@ interface ClaudeCodeQueryOptions {
    - Propagates cancellation to Claude Code's AbortController
    - Handles both user cancellation and AbortError from Claude Code
    - Returns appropriate cancelled status in response
+6. **Configuration Support**:
+   - Environment variables for all default options
+   - Tool can be enabled/disabled via CLAUDE_CODE_ENABLE
+   - Per-request option overrides work correctly
+   - Dynamic tool descriptions show configured defaults
+   - Configuration module with mergeOptions helper
 
 ## Testing
 - Created unit tests for schema validation and message handling
 - Added cancellation behavior unit tests
+- Added configuration logic unit tests
 - Integration tests prepared (require Claude API key for full testing)
 - Manual test scripts:
   - `/test-claude-code.sh` - Basic functionality test
   - `/test-cancellation.sh` - Cancellation behavior test
   - `/test-claude-code-sse.sh` - SSE streaming test
+  - `/test-config.sh` - Configuration testing
+
+## Environment Variables
+- `CLAUDE_CODE_ENABLE` - Enable/disable the tool (default: true)
+- `CLAUDE_CODE_DEFAULT_CWD` - Default working directory
+- `CLAUDE_CODE_DEFAULT_MODEL` - Default model to use
+- `CLAUDE_CODE_DEFAULT_PERMISSION_MODE` - Default permission mode (default: bypassPermissions)
+- `CLAUDE_CODE_MAX_TURNS` - Default max turns
+- `CLAUDE_CODE_MAX_MESSAGES` - Default max messages (default: 100)
+- `CLAUDE_CODE_INCLUDE_SYSTEM_MESSAGES` - Include system messages (default: true)
