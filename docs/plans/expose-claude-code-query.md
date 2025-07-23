@@ -46,19 +46,19 @@ Minimal filtering - only remove sensitive data like API keys in errors.
 
 # Tasks
 
-[ ] Install @anthropic-ai/claude-code as a dependency
+[x] Install @anthropic-ai/claude-code as a dependency
 
-[ ] Define the tool schema for the query endpoint
+[x] Define the tool schema for the query endpoint
   - Input parameters (prompt, options)
   - Output schema (message bundle)
 
-[ ] Implement the query tool handler
+[x] Implement the query tool handler
   - Initialize Claude Code query with provided options
   - Handle async generator iteration
   - Emit notifications for each message
   - Collect messages for final response
 
-[ ] Define notification schema for streamed messages
+[x] Define notification schema for streamed messages
   - Message type differentiation
   - Consistent format for all message types
 
@@ -187,3 +187,23 @@ interface ClaudeCodeQueryOptions {
 - Add prometheus metrics for monitoring
 - Ensure proper TypeScript types throughout
 - Follow existing codebase patterns for consistency
+
+# Implementation Progress
+
+## Completed Features
+1. **Tool Definition**: Added `claude_code_query` tool to both HTTP and stdio MCP servers
+2. **Handler Implementation**: 
+   - Processes Claude Code queries with configurable options
+   - Streams messages via MCP notifications (HTTP transport only)
+   - Collects and returns complete message history
+   - Implements message filtering and pagination
+3. **Error Handling**: Basic error handling with graceful degradation
+4. **Default Configuration**: 
+   - Permission mode defaults to 'bypassPermissions'
+   - Max messages defaults to 100
+   - Include system messages defaults to true
+
+## Testing
+- Created unit tests for schema validation and message handling
+- Integration tests prepared (require Claude API key for full testing)
+- Manual test script available at `/test-claude-code.sh`
