@@ -68,7 +68,7 @@ Minimal filtering - only remove sensitive data like API keys in errors.
   - Timeout handling
   - Graceful degradation
 
-[ ] Add abort/cancellation support
+[x] Add abort/cancellation support
   - Design cancellation mechanism (separate tool or request metadata)
   - Implement AbortController integration
   - Handle cleanup on cancellation
@@ -205,8 +205,17 @@ interface ClaudeCodeQueryOptions {
    - Permission mode defaults to 'bypassPermissions'
    - Max messages defaults to 100
    - Include system messages defaults to true
+5. **Cancellation Support**:
+   - Integrated with MCP's AbortSignal mechanism
+   - Propagates cancellation to Claude Code's AbortController
+   - Handles both user cancellation and AbortError from Claude Code
+   - Returns appropriate cancelled status in response
 
 ## Testing
 - Created unit tests for schema validation and message handling
+- Added cancellation behavior unit tests
 - Integration tests prepared (require Claude API key for full testing)
-- Manual test script available at `/test-claude-code.sh`
+- Manual test scripts:
+  - `/test-claude-code.sh` - Basic functionality test
+  - `/test-cancellation.sh` - Cancellation behavior test
+  - `/test-claude-code-sse.sh` - SSE streaming test

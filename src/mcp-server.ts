@@ -118,8 +118,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 });
 
 // Handle tool calls
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
+server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
   const { name, arguments: args } = request.params;
+  const signal = extra?.signal;
 
   switch (name) {
     case 'calculate_bmi': {
@@ -187,6 +188,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         options: queryOptions
       });
       
+      // Handle cancellation from MCP client
+      if (signal) {
+        signal.addEventListener('abort', () => {
+          console.error(`[claude_code_query] Cancellation requested for session ${sessionId}`);
+          queryOptions.abortController.abort();
+        });
+      }
+      
       try {
         // Initialize the Claude Code query
         const query = claudeQuery({
@@ -196,6 +205,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         
         // Process messages from the async generator
         for await (const message of query) {
+          // Check if cancelled
+          if (signal?.aborted) {
+            console.error(`[claude_code_query] Query cancelled for session ${sessionId}`);
+            break;
+          }
           messages.push(message);
           sequence++;
           
@@ -226,7 +240,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // Extract result from the last message if it's a result type
         const lastMessage = messages[messages.length - 1];
         let result;
-        if (lastMessage?.type === 'result') {
+        if (signal?.aborted) {
+          result = {
+            success: false,
+            summary: 'Query cancelled by user',
+            error: 'cancelled'
+          };
+        } else if (lastMessage?.type === 'result') {
           const resultMessage = lastMessage as any;
           result = {
             success: !resultMessage.is_error,
@@ -259,9 +279,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
         
       } catch (error: any) {
-        console.error(`[claude_code_query] Query failed:`, {
+        const isCancellation = error.name === 'AbortError' || signal?.aborted;
+        
+        console.error(`[claude_code_query] Query ${isCancellation ? 'cancelled' : 'failed'}:`, {
           sessionId,
-          error: error.message
+          error: error.message,
+          errorName: error.name
         });
         
         return {
@@ -276,8 +299,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 messageCount: messages.length,
                 result: {
                   success: false,
-                  summary: 'Query failed',
-                  error: error.message
+                  summary: isCancellation ? 'Query cancelled' : 'Query failed',
+                  error: isCancellation ? 'cancelled' : error.message
                 }
               }, null, 2)
             }
