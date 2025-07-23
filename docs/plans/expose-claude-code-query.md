@@ -19,21 +19,29 @@ We want to expose the @anthropic-ai/claude-code SDK's `query` method as an MCP t
 
 # Open Questions
 
-[ ] Should we expose all Claude Code options or start with a subset?
+[x] Should we expose all Claude Code options or start with a subset?
+Start with safe subset: cwd, maxTurns, model, appendSystemPrompt. Add permission controls later.
 
-[ ] How should we handle the AbortController for cancellation - via a separate tool or parameter?
+[x] How should we handle the AbortController for cancellation - via a separate tool or parameter?
+Use MCP's built-in request cancellation mechanism. No separate tool needed.
 
-[ ] Should we implement authentication/authorization for this tool?
+[x] Should we implement authentication/authorization for this tool?
+Yes, at MCP server level. Add config option to enable/disable tool.
 
-[ ] What notification channel/topic should we use for message streaming?
+[x] What notification channel/topic should we use for message streaming?
+Use "claude-code/messages" topic for clear namespace separation.
 
-[ ] Should we support streaming prompts (AsyncIterable<SDKUserMessage>) or just string prompts initially?
+[x] Should we support streaming prompts (AsyncIterable<SDKUserMessage>) or just string prompts initially?
+String prompts only initially. Add streaming support later if needed.
 
-[ ] How should we handle large message histories that might exceed response size limits?
+[x] How should we handle large message histories that might exceed response size limits?
+Return last N messages (default 100), include summary and truncation info.
 
-[ ] Should we implement rate limiting or usage tracking?
+[x] Should we implement rate limiting or usage tracking?
+Basic execution logging and metrics only. Defer rate limiting to server level.
 
-[ ] Do we need to sanitize/filter certain message types or content?
+[x] Do we need to sanitize/filter certain message types or content?
+Minimal filtering - only remove sensitive data like API keys in errors.
 
 # Tasks
 
@@ -135,26 +143,23 @@ CLAUDE_CODE_DEFAULT_PERMISSION_MODE=default
 CLAUDE_CODE_ALLOWED_TOOLS=read,write,edit,grep,glob
 ```
 
-## Tool Options Schema
+## Tool Options Schema (Initial Implementation)
 ```typescript
 interface ClaudeCodeQueryOptions {
-  // Core options
-  cwd?: string;
-  maxTurns?: number;
-  model?: string;
+  // Core options (v1)
+  cwd?: string;              // Working directory for Claude Code
+  maxTurns?: number;         // Maximum conversation turns
+  model?: string;            // Model to use (e.g., 'claude-3-opus')
+  appendSystemPrompt?: string; // Additional system instructions
   
-  // Permission controls
-  permissionMode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
-  allowedTools?: string[];
-  disallowedTools?: string[];
+  // Response options
+  maxMessages?: number;      // Max messages to return (default: 100)
+  includeSystemMessages?: boolean; // Include system messages (default: true)
   
-  // Execution options
-  timeout?: number;
-  continueOnError?: boolean;
-  
-  // Advanced options
-  customSystemPrompt?: string;
-  appendSystemPrompt?: string;
+  // Future options (v2)
+  // permissionMode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
+  // allowedTools?: string[];
+  // disallowedTools?: string[];
 }
 ```
 
