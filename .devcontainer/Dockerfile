@@ -5,13 +5,21 @@ FROM debian:12
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install essential packages in one layer
-RUN apt-get update  
-RUN apt-get install -y --no-install-recommends zsh \
+# First install curl and gpg
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    gnupg \
+    ca-certificates
+
+# Add Fish repository and key
+RUN echo 'deb http://download.opensuse.org/repositories/shells:/fish:/release:/4/Debian_11/ /' | tee /etc/apt/sources.list.d/shells:fish:release:4.list
+RUN curl -fsSL https://download.opensuse.org/repositories/shells:fish:release:4/Debian_12/Release.key | gpg --dearmor | tee /etc/apt/trusted.gpg.d/shells_fish_release_4.gpg > /dev/null
+
+# Update and install remaining packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    zsh \
     wget \
     git \
-    ca-certificates \
-    gnupg \
     sudo \
     locales \
     build-essential \
@@ -43,7 +51,8 @@ RUN apt-get install -y --no-install-recommends zsh \
     libx11-xcb-dev \
     xdg-utils \
     tmux \
-    openssh-client
+    openssh-client \
+    fish
 
 RUN curl -fsSL https://deb.nodesource.com/setup_23.x -o nodesource_setup.sh
 RUN sudo -E bash nodesource_setup.sh
@@ -120,6 +129,7 @@ RUN mkdir -p /home/$USERNAME/.config && \
 
 # Set working directory
 WORKDIR /workspace
+
 
 # Keep container running
 CMD ["sleep", "infinity"]

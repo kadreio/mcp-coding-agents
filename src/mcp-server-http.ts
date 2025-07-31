@@ -14,7 +14,7 @@ import { randomUUID } from 'crypto';
 import dotenv from 'dotenv';
 import express, { NextFunction, Request, Response } from 'express';
 import { query as claudeQuery, type SDKMessage } from '@anthropic-ai/claude-code';
-import { claudeCodeConfig } from './config/claude-code.js';
+import { claudeCodeConfig } from './config/claude-code';
 
 // Load environment variables
 dotenv.config();
