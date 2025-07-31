@@ -14,6 +14,9 @@ import { randomUUID } from 'crypto';
 import dotenv from 'dotenv';
 import express, { NextFunction, Request, Response } from 'express';
 import { getClaudeCodeToolDefinition, handleClaudeCodeQuery, isClaudeCodeQueryArgs } from './lib/agents/claude';
+import { getGeminiToolDefinition, handleGeminiQuery, isGeminiQueryArgs } from './lib/agents/gemini';
+import { getCodexToolDefinition, handleCodexQuery, isCodexQueryArgs } from './lib/agents/codex';
+import * as promptsData from './lib/prompts.json';
 
 // Load environment variables
 dotenv.config();
@@ -94,6 +97,14 @@ function createMCPServer(): Server {
       if (claudeCodeTool) {
         tools.push(claudeCodeTool);
       }
+      
+      // Add Gemini tool
+      const geminiTool = getGeminiToolDefinition();
+      tools.push(geminiTool);
+      
+      // Add Codex tool
+      const codexTool = getCodexToolDefinition();
+      tools.push(codexTool);
       
       return { tools };
   });
@@ -217,6 +228,20 @@ function createMCPServer(): Server {
           throw new Error('Invalid arguments for claude_code_query: prompt is required');
         }
         return await handleClaudeCodeQuery(args, extra?.sendNotification, extra?.signal);
+      }
+      
+      case 'gemini_query': {
+        if (!isGeminiQueryArgs(args)) {
+          throw new Error('Invalid arguments for gemini_query: prompt is required');
+        }
+        return await handleGeminiQuery(args, extra?.signal);
+      }
+      
+      case 'codex_query': {
+        if (!isCodexQueryArgs(args)) {
+          throw new Error('Invalid arguments for codex_query: prompt is required');
+        }
+        return await handleCodexQuery(args, extra?.sendNotification, extra?.signal);
       }
       
       case 'stream_sse_timestamps': {
@@ -367,70 +392,46 @@ function createMCPServer(): Server {
 
   // Define available prompts
   server.setRequestHandler(ListPromptsRequestSchema, async () => {
-    return {
-      prompts: [
-        {
-          name: 'analyze_data',
-          description: 'Analyze data and provide insights',
-          arguments: [
-            {
-              name: 'data_type',
-              description: 'Type of data to analyze',
-              required: true,
-            },
-          ],
-        },
-        {
-          name: 'debug_issue',
-          description: 'Help debug an issue',
-          arguments: [
-            {
-              name: 'error_message',
-              description: 'The error message or issue description',
-              required: true,
-            },
-          ],
-        },
-      ],
-    };
+    const prompts = Object.values(promptsData.prompts).map(prompt => ({
+      name: prompt.name,
+      description: prompt.description,
+      arguments: prompt.arguments
+    }));
+    
+    return { prompts };
   });
 
   // Handle prompt requests
   server.setRequestHandler(GetPromptRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-
-    switch (name) {
-      case 'analyze_data':
-        return {
-          description: 'Analyze data and provide insights',
-          messages: [
-            {
-              role: 'user',
-              content: {
-                type: 'text',
-                text: `Please analyze the following ${args?.data_type || 'data'} and provide insights, patterns, and recommendations.`,
-              },
-            },
-          ],
-        };
-
-      case 'debug_issue':
-        return {
-          description: 'Help debug an issue',
-          messages: [
-            {
-              role: 'user',
-              content: {
-                type: 'text',
-                text: `I'm encountering the following issue: ${args?.error_message || 'Unknown error'}. Please help me debug this by analyzing potential causes and suggesting solutions.`,
-              },
-            },
-          ],
-        };
-
-      default:
-        throw new Error(`Unknown prompt: ${name}`);
+    
+    const prompt = promptsData.prompts[name as keyof typeof promptsData.prompts];
+    
+    if (!prompt) {
+      throw new Error(`Unknown prompt: ${name}`);
     }
+    
+    // Replace argument placeholders in content
+    let content = prompt.content;
+    if (args && prompt.arguments) {
+      for (const arg of prompt.arguments) {
+        const value = args[arg.name] || `<${arg.name}>`;
+        content = content.replace(new RegExp(`\\{${arg.name}\\}`, 'g'), value);
+      }
+    }
+    
+    return {
+      description: prompt.description,
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: content,
+          },
+        },
+      ],
+    };
   });
 
   return server;
@@ -550,9 +551,9 @@ app.get('/', (_req: Request, res: Response) => {
     transport: 'Streamable HTTP',
     endpoint: '/mcp',
     capabilities: {
-      tools: ['calculate_bmi', 'get_timestamp', 'execute_command', 'stream_sse_timestamps'],
+      tools: ['calculate_bmi', 'get_timestamp', 'execute_command', 'stream_sse_timestamps', 'claude_code_query', 'gemini_query', 'codex_query'],
       resources: ['config://server', 'stats://system'],
-      prompts: ['analyze_data', 'debug_issue']
+      prompts: Object.keys(promptsData.prompts)
     }
   });
 });

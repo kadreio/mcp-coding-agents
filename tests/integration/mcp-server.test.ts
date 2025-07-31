@@ -82,12 +82,16 @@ describe('MCP Streamable HTTP Server Integration Tests', () => {
     test('should list available tools', async () => {
       const response = await client.listTools();
       
-      expect(response.tools).toHaveLength(5);
+      console.log('Available tools:', response.tools.map(t => t.name));
+      
+      expect(response.tools).toHaveLength(7);
       expect(response.tools.map(t => t.name)).toContain('calculate_bmi');
       expect(response.tools.map(t => t.name)).toContain('get_timestamp');
       expect(response.tools.map(t => t.name)).toContain('execute_command');
       expect(response.tools.map(t => t.name)).toContain('stream_sse_timestamps');
       expect(response.tools.map(t => t.name)).toContain('claude_code_query');
+      expect(response.tools.map(t => t.name)).toContain('gemini_query');
+      expect(response.tools.map(t => t.name)).toContain('codex_query');
     });
 
     test('should calculate BMI correctly', async () => {

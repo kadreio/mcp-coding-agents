@@ -1,0 +1,82 @@
+{
+  "prompts": {
+    "commit": {
+      "name": "commit",
+      "description": "Bundle outstanding changes into logical commits with good messages",
+      "arguments": [],
+      "content": "Bundle all outstanding into logical commits, and then commit them with good messages. Ensure we're not committing any sensitive data. Run all tests in server and client before committing. If they fail, ask for feedback. Note these tests include\nfrontend:\n`npm test`\n`npm test:e2e`\nbackend\n`make check`\n`make test-all`"
+    },
+    "plan": {
+      "name": "plan",
+      "description": "Create a feature plan with context, questions, and tasks",
+      "arguments": [
+        {
+          "name": "feature_description",
+          "description": "The feature to plan for",
+          "required": true
+        }
+      ],
+      "content": "Plans go in ./docs/plans\n\nWe are going to create a plan for a feature. This plan will include all context needed, any outstanding product or feature questions that need more investigation, and an explicit task list of things to do. ultrathink about implementing this plan and everything we'll want to account for to make sure this is a top notch implementation. Always focus on creating the cleanest, tightest, most focused implementation. Avoid abstractions unless clearly necessary, creating the minimal implementation to achieve our goals.\n\nThe feature we're planning for:\n\n{feature_description}\n\nThe template is as follows:\n\n---\n\nCreated Date <Today's Date>\n\n# Feature Plan: <title>\n\n# Overview\n\n<Context on why we're making this feature, and what it's looking to achieve>\n\n# Outcomes\n\n<a bulleted list things that we want to achieve with this plan>\n\n# Open Questions\n\n<A checkmarkable list of open questions we should resolve before starting the plan, after receiving the feedback from the user on the questions, we will checkmark the question as done, and include the answer below it. Example:\n\n[ ] Do we have a preference on using stdlib versus a dependency\n\n[x] What Metrics do we need to collect\n\nCPU, Memory, and average response time\n\n>\n\n# Tasks\n\n<A thorough list of checkmarkable tasks that need to be completed in order to achieve the plan: EG\n\n[ ] Define API Interface for the new endpoint using swagger\n\n[ ] Create tests for the new endpoint\n\n[ ] Implement database migrations\n\n[ ] Create DAOs\n\n[ ] Create Seeders\n\n[ ] Implement business logic between endpoint router and DAO\n\n[ ] Implement endpoint and swagger\n\n>\n\n# Security\n\n<Parts of the implementation we need to consider especially for security ramifications>\n\n# <Other sections as make sense for the implementation, including schemas, diagrams, or other concerns>"
+    },
+    "examine": {
+      "name": "examine",
+      "description": "Thoroughly examine project structure and document findings",
+      "arguments": [
+        {
+          "name": "area",
+          "description": "The area of the project to examine",
+          "required": true
+        }
+      ],
+      "content": "For {area}, thoroughly look through the project and think deeply about how it's structured. Consider things like\n- Testing\n    - What are the commands\n    - How can we test specific files/modules/etc\n    - What are best practices for creating new tests\n- Architecture\n    - What are the different layers\n    - How are they defined and interfaces created\n    - What are good reference components that demonstrate this\n- Other utilities\n    - Linting\n    - Compilers\n    - Other aspects\n    - How and when should we run them\n    - What are best practices\n\nAdd these docs to ./docs/docs/agent_docs/<layer>"
+    },
+    "execute_plan": {
+      "name": "execute_plan",
+      "description": "Execute a plan from the docs/plans directory",
+      "arguments": [
+        {
+          "name": "plan_path",
+          "description": "Path to the plan file to execute",
+          "required": true
+        }
+      ],
+      "content": "{plan_path}\n\nReview this plan for development of this feature. We are going to complete one task at a time, so choose one to focus on. Ensure every task is well tested where it makes sense, only marking a task complete once we've run all appropriate tests.\nBefore starting coding, review if there are any clarifications you need me to make. We must make sure there are answers to open questions before proceeding. Give recommendations for each question. After completing the task, update the plan with updates and completed tasks."
+    },
+    "update_plan": {
+      "name": "update_plan",
+      "description": "Update an existing plan with progress",
+      "arguments": [
+        {
+          "name": "plan_path",
+          "description": "Path to the plan file to update",
+          "required": true
+        }
+      ],
+      "content": "{plan_path}\n\nUpdate the plan based on our progress. Mark completed tasks, add any new tasks discovered, and update any relevant sections based on what we've learned."
+    },
+    "docs": {
+      "name": "docs",
+      "description": "Create sphinx documentation for the project",
+      "arguments": [],
+      "content": "We want to create sphinx documentation in /docs. This should cover client, server, and infrastructure and document file structure, patterns, and best practices.\n\nPlans go in ./docs/plans\n\nWe are going to create a plan for this feature. This plan will include all context needed, any outstanding product or feature questions that need more investigation, and an explicit task list of things to do. ultrathink about implementing this plan and everything we'll want to account for to make sure this is a top notch implementation. Always focus on creating the cleanest, tightest, most focused implementation. Avoid abstractions unless clearly necessary, creating the minimal implementation to achieve our goals.\n\nThe template is as follows:\n\n---\n\nCreated Date <Today's Date>\n\n# Feature Plan: <title>\n\n# Overview\n\n<Context on why we're making this feature, and what it's looking to achieve>\n\n# Outcomes\n\n<a bulleted list things that we want to achieve with this plan>\n\n# Open Questions\n\n<A checkmarkable list of open questions we should resolve before starting the plan, after receiving the feedback from the user on the questions, we will checkmark the question as done, and include the answer below it. Example:\n\n[ ] Do we have a preference on using stdlib versus a dependency\n\n[x] What Metrics do we need to collect\n\nCPU, Memory, and average response time\n\n>\n\n# Tasks\n\n<A thorough list of checkmarkable tasks that need to be completed in order to achieve the plan: EG\n\n[ ] Define API Interface for the new endpoint using swagger\n\n[ ] Create tests for the new endpoint\n\n[ ] Implement database migrations\n\n[ ] Create DAOs\n\n[ ] Create Seeders\n\n[ ] Implement business logic between endpoint router and DAO\n\n[ ] Implement endpoint and swagger\n\n>\n\n# Security\n\n<Parts of the implementation we need to consider especially for security ramifications>\n\n# <Other sections as make sense for the implementation, including schemas, diagrams, or other concerns>"
+    },
+    "update_docs": {
+      "name": "update_docs",
+      "description": "Update existing documentation",
+      "arguments": [
+        {
+          "name": "doc_path",
+          "description": "Path to the documentation to update",
+          "required": true
+        }
+      ],
+      "content": "{doc_path}\n\nUpdate this documentation based on recent changes. Ensure the documentation is accurate, clear, and follows the existing style and structure."
+    },
+    "devcontainer": {
+      "name": "devcontainer",
+      "description": "Create a devcontainer for VSCode and Codespaces",
+      "arguments": [],
+      "content": "Your goal is to create a devcontainer to be able to use this project in vscode and codespaces.\n\nYou will create a new container in ./devcontainers to set up.\n\nYou must include this feature:\n\"features\": {\n    \"ghcr.io/anthropics/devcontainer-features/claude-code:1.0.5\": {}\n}\n\nYou have access to the devcontainer cli, and should test all changes against that cli to make sure the container starts correctly and behaves expectedly.\n\nYou can find the specific docs on configuring a development environment here docs/contributing/development/\n\nWe do not wish to use the docker-compose method, and we primarily care about working on the superset frontend and backend.\n\nOur goal for the end of this feature is that we are able to\n\n1. Launch a devcontainer\n2. That devcontainer automatically sets up all dependencies\n3. If this is the first time launching it (postgres is not configured), we automatically set that up\n4. The devcontainer automatically starts the frontend and backend\n5. We can connect to those processes from exposed ports\n6. Changes to code are automatically picked up and redeployed"
+    }
+  }
+}
