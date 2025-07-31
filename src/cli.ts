@@ -16,10 +16,10 @@ if (!scripts[command]) {
   console.error(`Unknown command: ${command}`);
   console.error(`Available commands: ${Object.keys(scripts).join(', ')}`);
   console.error(`\nUsage:`);
-  console.error(`  npx @kardio/mcp-claude-code          # Run MCP server (STDIO mode)`);
-  console.error(`  npx @kardio/mcp-claude-code stdio    # Run MCP server (STDIO mode)`);
-  console.error(`  npx @kardio/mcp-claude-code http     # Run MCP server (HTTP mode)`);
-  console.error(`  npx @kardio/mcp-claude-code server   # Run Express server`);
+  console.error(`  npx @kadreio/mcp-claude-code          # Run MCP server (STDIO mode)`);
+  console.error(`  npx @kadreio/mcp-claude-code stdio    # Run MCP server (STDIO mode)`);
+  console.error(`  npx @kadreio/mcp-claude-code http     # Run MCP server (HTTP mode)`);
+  console.error(`  npx @kadreio/mcp-claude-code server   # Run Express server`);
   process.exit(1);
 }
 

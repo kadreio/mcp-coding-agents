@@ -1,11 +1,11 @@
-# @kardio/mcp-claude-code
+# @kadreio/mcp-claude-code
 
 MCP (Model Context Protocol) server with Claude Code integration for AI model context.
 
 ## Installation
 
 ```bash
-npm install -g @kardio/mcp-claude-code
+npm install -g @kadreio/mcp-claude-code
 ```
 
 ## Usage
@@ -14,13 +14,13 @@ npm install -g @kardio/mcp-claude-code
 
 ```bash
 # Run MCP server in STDIO mode (default)
-npx @kardio/mcp-claude-code
+npx @kadreio/mcp-claude-code
 
 # Run MCP server in HTTP mode
-npx @kardio/mcp-claude-code http
+npx @kadreio/mcp-claude-code http
 
 # Run Express server
-npx @kardio/mcp-claude-code server
+npx @kadreio/mcp-claude-code server
 ```
 
 ### After global installation

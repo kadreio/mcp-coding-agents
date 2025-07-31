@@ -1,5 +1,5 @@
 {
-  "name": "@kardio/mcp-claude-code",
+  "name": "@kadreio/mcp-claude-code",
   "version": "1.0.0",
   "main": "dist/index.js",
   "bin": {

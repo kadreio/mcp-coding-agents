@@ -1,4 +1,4 @@
-import { spawn, ChildProcess } from 'child_process';
+import { ChildProcess, spawn } from 'child_process';
 import path from 'path';
 
 describe('CLI Binary Tests', () => {
@@ -51,7 +51,7 @@ describe('CLI Binary Tests', () => {
           expect(code).toBe(1);
           expect(errorOutput).toContain('Unknown command: unknown');
           expect(errorOutput).toContain('Available commands: stdio, http, server');
-          expect(errorOutput).toContain('npx @kardio/mcp-claude-code');
+          expect(errorOutput).toContain('npx @kadreio/mcp-claude-code');
           resolve();
         });
       });
