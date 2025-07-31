@@ -223,10 +223,10 @@ interface ClaudeCodeQueryOptions {
 - Added configuration logic unit tests
 - Integration tests prepared (require Claude API key for full testing)
 - Manual test scripts:
-  - `/test-claude-code.sh` - Basic functionality test
-  - `/test-cancellation.sh` - Cancellation behavior test
-  - `/test-claude-code-sse.sh` - SSE streaming test
-  - `/test-config.sh` - Configuration testing
+  - `/tests/scripts/test-claude-code.sh` - Basic functionality test
+  - `/tests/scripts/test-cancellation.sh` - Cancellation behavior test
+  - `/tests/scripts/test-claude-code-sse.sh` - SSE streaming test
+  - `/tests/scripts/test-config.sh` - Configuration testing
 
 ## Environment Variables
 - `CLAUDE_CODE_ENABLE` - Enable/disable the tool (default: true)

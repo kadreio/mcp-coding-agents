@@ -120,7 +120,7 @@ curl -N -H "Mcp-Session-Id: $SESSION_ID" \
 Use the provided test script for automatic session handling:
 
 ```bash
-./test-with-session.sh
+./tests/scripts/test-with-session.sh
 ```
 
 This script will:
