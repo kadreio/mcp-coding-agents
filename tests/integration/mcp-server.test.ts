@@ -11,10 +11,10 @@ describe('MCP Streamable HTTP Server Integration Tests', () => {
   const serverPort = 3050; // Using the default MCP port
 
   beforeAll(async () => {
-    // Start the MCP server as a separate process
-    const serverPath = path.join(__dirname, '../../src/mcp-server-http.ts');
-    serverProcess = spawn('ts-node', [serverPath], {
-      env: { ...process.env, MCP_PORT: String(serverPort) },
+    // Start the MCP server using the unified CLI in HTTP mode
+    const serverPath = path.join(__dirname, '../../src/cli-unified.ts');
+    serverProcess = spawn('ts-node', [serverPath, 'http', '--port', String(serverPort)], {
+      env: { ...process.env },
       stdio: 'pipe'
     });
 
@@ -26,7 +26,7 @@ describe('MCP Streamable HTTP Server Integration Tests', () => {
 
       serverProcess.stdout?.on('data', (data) => {
         console.log('Server output:', data.toString());
-        if (data.toString().includes('MCP Streamable HTTP Server running')) {
+        if (data.toString().includes('MCP HTTP Server running')) {
           clearTimeout(timeout);
           resolve();
         }
