@@ -67,32 +67,52 @@ describe('Claude Code Query Tool Tests', () => {
   const serverPort = 3051; // Use different port to avoid conflicts
 
   beforeAll(async () => {
-    // Start the MCP server using unified CLI
-    const serverPath = path.join(__dirname, '../../src/cli-unified.ts');
-    serverProcess = spawn('ts-node', [serverPath, 'http', '--port', String(serverPort)], {
+    // Start the MCP server using compiled CLI
+    const serverPath = path.join(__dirname, '../../dist/cli-unified.js');
+    serverProcess = spawn('node', [serverPath, 'http', '--port', String(serverPort)], {
       env: { ...process.env },
       stdio: 'pipe'
     });
 
+    let serverStarted = false;
+    let output = '';
+
+    // Collect output from both streams
+    serverProcess.stdout?.on('data', (data) => {
+      output += data.toString();
+      console.log('Server output:', data.toString());
+      if (output.includes('MCP HTTP Server running')) {
+        serverStarted = true;
+      }
+    });
+
+    serverProcess.stderr?.on('data', (data) => {
+      const errorOutput = data.toString();
+      console.error('Server stderr:', errorOutput);
+      // Some output goes to stderr but isn't an error
+      output += errorOutput;
+      if (output.includes('MCP HTTP Server running')) {
+        serverStarted = true;
+      }
+    });
+
     // Wait for server to start
     await new Promise<void>((resolve, reject) => {
+      const checkInterval = setInterval(() => {
+        if (serverStarted) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 100);
+
       const timeout = setTimeout(() => {
+        clearInterval(checkInterval);
+        console.error('Server failed to start. Output so far:', output);
         reject(new Error('Server failed to start within timeout'));
       }, 10000);
 
-      serverProcess.stdout?.on('data', (data) => {
-        console.log('Server output:', data.toString());
-        if (data.toString().includes('MCP HTTP Server running')) {
-          clearTimeout(timeout);
-          resolve();
-        }
-      });
-
-      serverProcess.stderr?.on('data', (data) => {
-        console.error('Server error:', data.toString());
-      });
-
       serverProcess.on('error', (err) => {
+        clearInterval(checkInterval);
         clearTimeout(timeout);
         reject(err);
       });

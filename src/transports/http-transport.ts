@@ -28,7 +28,7 @@ export class HttpTransport extends MCPTransport {
   constructor(coreServer: CoreMCPServer, config: HttpTransportConfig = {}) {
     super(coreServer, config);
     this.port = config.port || parseInt(process.env.MCP_PORT || '3050', 10);
-    this.host = config.host || 'localhost';
+    this.host = config.host || '0.0.0.0';
     this.app = express();
     this.transports = new Map();
     this.sharedTransport = null;
@@ -187,9 +187,10 @@ export class HttpTransport extends MCPTransport {
 
     return new Promise((resolve) => {
       this.server = this.app.listen(this.port, this.host, () => {
-        console.log(`🚀 MCP HTTP Server running on http://${this.host}:${this.port}`);
-        console.log(`📡 MCP endpoint: http://${this.host}:${this.port}/mcp`);
-        console.log(`❤️  Health check: http://${this.host}:${this.port}/health`);
+        const displayHost = this.host === '0.0.0.0' ? 'localhost' : this.host;
+        console.log(`🚀 MCP HTTP Server running on http://${displayHost}:${this.port}`);
+        console.log(`📡 MCP endpoint: http://${displayHost}:${this.port}/mcp`);
+        console.log(`❤️  Health check: http://${displayHost}:${this.port}/health`);
         this.running = true;
         resolve();
       });
