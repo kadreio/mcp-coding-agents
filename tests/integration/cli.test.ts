@@ -1,39 +1,12 @@
-import { ChildProcess, spawn } from 'child_process';
+import { spawn } from 'child_process';
 import path from 'path';
 
 describe('Unified CLI Tests', () => {
   const CLI_PATH = path.join(__dirname, '../../dist/cli-unified.js');
-  const TIMEOUT = 10000;
-
-  const startCLI = (args: string[] = []): Promise<{
-    process: ChildProcess;
-    output: string;
-  }> => {
-    return new Promise((resolve, reject) => {
-      const child = spawn('node', [CLI_PATH, ...args], {
-        env: { ...process.env, NODE_ENV: 'test' }
-      });
-
-      let output = '';
-      let errorOutput = '';
-
-      child.stdout?.on('data', (data) => {
-        output += data.toString();
-      });
-
-      child.stderr?.on('data', (data) => {
-        errorOutput += data.toString();
-      });
-
-      child.on('error', reject);
-
-      setTimeout(() => {
-        resolve({ process: child, output: output + errorOutput });
-      }, 1000);
-    });
-  };
+  const TIMEOUT = 15000;
 
   afterEach(async () => {
+    // Small delay between tests to avoid port conflicts
     await new Promise(resolve => setTimeout(resolve, 100));
   });
 
@@ -59,13 +32,43 @@ describe('Unified CLI Tests', () => {
     }, TIMEOUT);
 
     test('should start HTTP server by default', async () => {
-      const { process: child } = await startCLI();
+      const testPort = 3055; // Use unique port for this test
+      const child = spawn('node', [CLI_PATH, '--port', String(testPort)], {
+        env: { ...process.env, NODE_ENV: 'test' }
+      });
       
-      expect(child.pid).toBeDefined();
-      expect(child.killed).toBe(false);
+      let output = '';
+      let started = false;
       
-      // Wait a bit more to see if we get output
-      await new Promise(resolve => setTimeout(resolve, 500));
+      child.stdout?.on('data', (data) => {
+        output += data.toString();
+        if (output.includes('MCP HTTP Server running')) {
+          started = true;
+        }
+      });
+      
+      child.stderr?.on('data', (data) => {
+        console.error('Test stderr:', data.toString());
+      });
+      
+      // Wait for server to start
+      await new Promise<void>((resolve) => {
+        const checkInterval = setInterval(() => {
+          if (started) {
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 100);
+        
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          resolve();
+        }, 5000);
+      });
+      
+      expect(started).toBe(true);
+      expect(output).toContain(`MCP HTTP Server running`);
+      expect(output).toContain(String(testPort));
       
       child.kill('SIGTERM');
       
@@ -75,10 +78,38 @@ describe('Unified CLI Tests', () => {
     }, TIMEOUT);
 
     test('should start STDIO server with explicit command', async () => {
-      const { process: child } = await startCLI(['stdio']);
+      const child = spawn('node', [CLI_PATH, 'stdio'], {
+        env: { ...process.env, NODE_ENV: 'test' }
+      });
       
-      expect(child.pid).toBeDefined();
-      expect(child.killed).toBe(false);
+      // STDIO server should respond to initialize
+      const testMessage = JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '1.0.0',
+          capabilities: {},
+          clientInfo: { name: 'test', version: '1.0' }
+        }
+      }) + '\n';
+      
+      let response = '';
+      child.stdout?.on('data', (data) => {
+        response += data.toString();
+      });
+      
+      // Small delay to ensure process is ready
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      child.stdin?.write(testMessage);
+      
+      // Wait for response
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      expect(response).toContain('"jsonrpc":"2.0"');
+      expect(response).toContain('"result"');
+      expect(response).toContain('serverInfo');
       
       child.kill('SIGTERM');
       
@@ -88,34 +119,38 @@ describe('Unified CLI Tests', () => {
     }, TIMEOUT);
 
     test('should start HTTP server when specified', async () => {
-      const testPort = 3051;
+      const testPort = 3056;
       const child = spawn('node', [CLI_PATH, 'http', '--port', testPort.toString()], {
         env: { ...process.env, NODE_ENV: 'test' }
       });
 
       let output = '';
+      let started = false;
+      
       child.stdout?.on('data', (data) => {
         output += data.toString();
-      });
-      child.stderr?.on('data', (data) => {
-        output += data.toString();
+        if (output.includes('MCP HTTP Server running')) {
+          started = true;
+        }
       });
 
       await new Promise<void>((resolve) => {
-        const checkOutput = setInterval(() => {
-          if (output.includes(`MCP HTTP Server running`)) {
-            clearInterval(checkOutput);
+        const checkInterval = setInterval(() => {
+          if (started) {
+            clearInterval(checkInterval);
             resolve();
           }
         }, 100);
 
         setTimeout(() => {
-          clearInterval(checkOutput);
+          clearInterval(checkInterval);
           resolve();
         }, 5000);
       });
 
-      expect(child.pid).toBeDefined();
+      expect(started).toBe(true);
+      expect(output).toContain(String(testPort));
+      
       child.kill('SIGTERM');
       
       await new Promise<void>((resolve) => {
@@ -124,16 +159,44 @@ describe('Unified CLI Tests', () => {
     }, TIMEOUT);
 
     test('should handle legacy server command', async () => {
-      const child = spawn('node', [CLI_PATH, 'server']);
+      const testPort = 3057;
+      const child = spawn('node', [CLI_PATH, 'server', '--port', String(testPort)], {
+        env: { ...process.env, NODE_ENV: 'test' }
+      });
       
       let output = '';
+      let hasDeprecationMessage = false;
+      
+      child.stdout?.on('data', (data) => {
+        output += data.toString();
+        if (output.includes('deprecated')) {
+          hasDeprecationMessage = true;
+        }
+      });
+      
       child.stderr?.on('data', (data) => {
         output += data.toString();
+        if (output.includes('deprecated')) {
+          hasDeprecationMessage = true;
+        }
       });
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait for deprecation message and server start
+      await new Promise<void>((resolve) => {
+        const checkInterval = setInterval(() => {
+          if (hasDeprecationMessage && output.includes('MCP HTTP Server')) {
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 100);
+        
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          resolve();
+        }, 5000);
+      });
 
-      expect(output).toContain('Note: "server" command is deprecated');
+      expect(hasDeprecationMessage).toBe(true);
       
       child.kill('SIGTERM');
       
@@ -144,12 +207,33 @@ describe('Unified CLI Tests', () => {
   });
 
   describe('Transport modes', () => {
-    test('should accept --transport flag', async () => {
+    test('should accept --transport flag for stdio', async () => {
       const child = spawn('node', [CLI_PATH, '--transport', 'stdio']);
       
-      expect(child.pid).toBeDefined();
+      // Test that STDIO server responds
+      const testMessage = JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '1.0.0',
+          capabilities: {},
+          clientInfo: { name: 'test', version: '1.0' }
+        }
+      }) + '\n';
+      
+      let response = '';
+      child.stdout?.on('data', (data) => {
+        response += data.toString();
+      });
       
       await new Promise(resolve => setTimeout(resolve, 500));
+      
+      child.stdin?.write(testMessage);
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      expect(response).toContain('"jsonrpc"');
       
       child.kill('SIGTERM');
       
@@ -159,19 +243,38 @@ describe('Unified CLI Tests', () => {
     }, TIMEOUT);
 
     test('should handle port configuration for HTTP', async () => {
-      const testPort = 3052;
+      const testPort = 3058;
       const child = spawn('node', [CLI_PATH, 'http', '--port', testPort.toString()], {
         env: { ...process.env, NODE_ENV: 'test' }
       });
 
       let output = '';
-      child.stderr?.on('data', (data) => {
+      let started = false;
+      
+      child.stdout?.on('data', (data) => {
         output += data.toString();
+        if (output.includes('MCP HTTP Server running') && output.includes(String(testPort))) {
+          started = true;
+        }
       });
 
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait for server to start with the specified port
+      await new Promise<void>((resolve) => {
+        const checkInterval = setInterval(() => {
+          if (started) {
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 100);
+        
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          resolve();
+        }, 5000);
+      });
 
-      expect(output).toContain(`3052`);
+      expect(started).toBe(true);
+      expect(output).toContain(String(testPort));
       
       child.kill('SIGTERM');
       

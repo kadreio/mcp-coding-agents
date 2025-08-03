@@ -67,10 +67,10 @@ describe('Claude Code Query Tool Tests', () => {
   const serverPort = 3051; // Use different port to avoid conflicts
 
   beforeAll(async () => {
-    // Start the MCP server as a separate process
-    const serverPath = path.join(__dirname, '../../src/mcp-server-http.ts');
-    serverProcess = spawn('ts-node', [serverPath], {
-      env: { ...process.env, MCP_PORT: String(serverPort) },
+    // Start the MCP server using unified CLI
+    const serverPath = path.join(__dirname, '../../src/cli-unified.ts');
+    serverProcess = spawn('ts-node', [serverPath, 'http', '--port', String(serverPort)], {
+      env: { ...process.env },
       stdio: 'pipe'
     });
 
@@ -82,7 +82,7 @@ describe('Claude Code Query Tool Tests', () => {
 
       serverProcess.stdout?.on('data', (data) => {
         console.log('Server output:', data.toString());
-        if (data.toString().includes('MCP Streamable HTTP Server running')) {
+        if (data.toString().includes('MCP HTTP Server running')) {
           clearTimeout(timeout);
           resolve();
         }
