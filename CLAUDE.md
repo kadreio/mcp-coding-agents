@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an MCP (Model Context Protocol) server that bridges Claude Code functionality with the standardized MCP protocol. It provides both HTTP and STDIO transport modes for flexible integration with MCP clients.
+This is a transport-agnostic MCP (Model Context Protocol) server that bridges Claude Code functionality with the standardized MCP protocol. The architecture cleanly separates business logic from transport concerns, supporting both HTTP and STDIO transport modes for flexible integration with MCP clients.
 
 ## Essential Commands
 
@@ -16,17 +16,22 @@ npm run dev:watch         # Watch mode compilation
 
 ### Running the Server
 ```bash
-# MCP STDIO mode (for direct MCP client connections)
-npm run mcp:dev           # Development mode with ts-node
+# Default mode (HTTP) - for backward compatibility
 npm run mcp               # Production mode (requires build)
+npm run mcp:dev           # Development mode with ts-node
 
-# MCP HTTP mode (for HTTP-based MCP clients)
-npm run mcp:http:dev      # Development mode on port 3050
+# STDIO mode - for direct process communication
+npm run mcp:stdio         # Production mode (requires build)
+npm run mcp:stdio:dev     # Development mode with ts-node
+
+# HTTP mode - for network-based MCP clients
 npm run mcp:http          # Production mode (requires build)
+npm run mcp:http:dev      # Development mode with ts-node
 
-# Express server (legacy HTTP endpoint)
-npm run dev               # Development with nodemon
-npm run start             # Production mode
+# Legacy endpoints (deprecated)
+npm run mcp:legacy        # Old HTTP server implementation
+npm run dev               # Express server with nodemon
+npm run start             # Express server production
 ```
 
 ### Testing
@@ -40,24 +45,34 @@ npm run test:integration  # Run integration tests only
 
 ### CLI Usage
 ```bash
-# After building, the CLI supports multiple modes:
-node dist/cli.js          # Default STDIO mode
-node dist/cli.js stdio    # Explicit STDIO mode
-node dist/cli.js http     # HTTP MCP server
-node dist/cli.js server   # Express server
+# After building, the unified CLI supports multiple modes:
+node dist/cli-unified.js          # Default HTTP mode
+node dist/cli-unified.js stdio    # STDIO mode for process communication
+node dist/cli-unified.js http     # HTTP mode with SSE support
+node dist/cli-unified.js server   # Legacy alias for HTTP mode
+
+# With options:
+node dist/cli-unified.js http --port 3051 --host 0.0.0.0
+node dist/cli-unified.js --transport stdio
 ```
 
 ## Architecture Overview
 
+### Core Components
+- **CoreMCPServer** (`src/core/mcp-server-core.ts`): Transport-agnostic business logic
+- **Transport Interface** (`src/core/transport-interface.ts`): Abstract base for transports
+- **Transport Factory** (`src/core/transport-factory.ts`): Creates appropriate transport
+
 ### Transport Layers
 The server implements two MCP transport modes:
-- **STDIO Mode** (`src/mcp-server.ts`): Direct process communication for MCP clients
-- **HTTP Mode** (`src/mcp-server-http.ts`): HTTP/SSE-based transport with session management
+- **STDIO Transport** (`src/transports/stdio-transport.ts`): Direct process communication via stdin/stdout
+- **HTTP Transport** (`src/transports/http-transport.ts`): HTTP/SSE-based transport with session management
 
-### Core Components
-- **CLI Entry** (`src/cli.ts`): Spawns appropriate server based on command
+### Additional Components
+- **Unified CLI** (`src/cli-unified.ts`): Main entry point with transport selection
+- **Legacy CLI** (`src/cli.ts`): Backward compatibility wrapper (deprecated)
 - **Configuration** (`src/config/claude-code.ts`): Manages Claude Code settings from environment
-- **Tool System**: Extensible tool registration with built-in utilities and Claude Code integration
+- **Tool System**: Extensible tool registration with built-in utilities and agent integrations
 
 ### Claude Code Integration
 The `claude_code_query` tool provides:

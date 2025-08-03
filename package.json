@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "bin": {
-    "mcp-claude-code": "./dist/cli.js"
+    "mcp-claude-code": "./dist/cli-unified.js"
   },
   "files": [
     "dist/**/*",
@@ -15,10 +15,13 @@
     "start": "node dist/index.js",
     "dev": "nodemon --exec ts-node src/index.ts",
     "dev:watch": "tsc --watch",
-    "mcp": "node dist/mcp-server.js",
-    "mcp:dev": "ts-node src/mcp-server.ts",
-    "mcp:http": "node dist/mcp-server-http.js",
-    "mcp:http:dev": "ts-node src/mcp-server-http.ts",
+    "mcp": "node dist/cli-unified.js",
+    "mcp:dev": "ts-node src/cli-unified.ts",
+    "mcp:stdio": "node dist/cli-unified.js stdio",
+    "mcp:stdio:dev": "ts-node src/cli-unified.ts stdio",
+    "mcp:http": "node dist/cli-unified.js http",
+    "mcp:http:dev": "ts-node src/cli-unified.ts http",
+    "mcp:legacy": "node dist/mcp-server-http.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -26,7 +29,13 @@
   },
   "author": "kardio",
   "license": "MIT",
-  "keywords": ["mcp", "model-context-protocol", "claude", "ai", "server"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "ai",
+    "server"
+  ],
   "description": "MCP server with Claude Code integration for AI model context",
   "repository": {
     "type": "git",
@@ -38,6 +47,7 @@
   "dependencies": {
     "@anthropic-ai/claude-code": "^1.0.58",
     "@modelcontextprotocol/sdk": "^1.15.1",
+    "commander": "^14.0.0",
     "dotenv": "^17.2.0",
     "express": "^5.1.0"
   },
