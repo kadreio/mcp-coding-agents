@@ -5,11 +5,19 @@ import express, { NextFunction, Request, Response, Application } from 'express';
 import { MCPTransport, TransportConfig } from '../core/transport-interface';
 import { CoreMCPServer } from '../core/mcp-server-core';
 import * as promptsData from '../lib/prompts.json';
+import * as https from 'https';
+import * as http from 'http';
+import * as fs from 'fs';
+import { generateSelfSignedCertificate } from '../utils/self-signed-cert';
 
 export interface HttpTransportConfig extends TransportConfig {
   port?: number;
   host?: string;
   cors?: boolean;
+  https?: boolean;
+  certPath?: string;
+  keyPath?: string;
+  caPath?: string;
 }
 
 /**
@@ -18,20 +26,43 @@ export interface HttpTransportConfig extends TransportConfig {
  */
 export class HttpTransport extends MCPTransport {
   private app: Application;
-  private server: any;
+  private server: http.Server | https.Server | null = null;
   private transports: Map<string, StreamableHTTPServerTransport>;
   private sharedTransport: StreamableHTTPServerTransport | null;
   private port: number;
   private host: string;
+  private useHttps: boolean;
+  private httpsOptions: https.ServerOptions | null = null;
   private running: boolean = false;
 
   constructor(coreServer: CoreMCPServer, config: HttpTransportConfig = {}) {
     super(coreServer, config);
     this.port = config.port || parseInt(process.env.MCP_PORT || '3050', 10);
     this.host = config.host || '0.0.0.0';
+    this.useHttps = config.https || false;
     this.app = express();
     this.transports = new Map();
     this.sharedTransport = null;
+
+    // Configure HTTPS options if enabled
+    if (this.useHttps) {
+      this.httpsOptions = {};
+      
+      if (config.certPath && config.keyPath) {
+        // Use provided certificate paths
+        try {
+          this.httpsOptions.cert = fs.readFileSync(config.certPath);
+          this.httpsOptions.key = fs.readFileSync(config.keyPath);
+          if (config.caPath) {
+            this.httpsOptions.ca = fs.readFileSync(config.caPath);
+          }
+        } catch (error) {
+          console.error('Failed to read certificate files:', error);
+          throw error;
+        }
+      }
+      // If no certs provided, we'll generate them on demand in start()
+    }
   }
 
   async initialize(): Promise<void> {
@@ -185,15 +216,42 @@ export class HttpTransport extends MCPTransport {
       throw new Error('HTTP transport is already running');
     }
 
-    return new Promise((resolve) => {
-      this.server = this.app.listen(this.port, this.host, () => {
+    return new Promise(async (resolve, reject) => {
+      const callback = () => {
         const displayHost = this.host === '0.0.0.0' ? 'localhost' : this.host;
-        console.log(`🚀 MCP HTTP Server running on http://${displayHost}:${this.port}`);
-        console.log(`📡 MCP endpoint: http://${displayHost}:${this.port}/mcp`);
-        console.log(`❤️  Health check: http://${displayHost}:${this.port}/health`);
+        const protocol = this.useHttps ? 'https' : 'http';
+        console.log(`🚀 MCP ${protocol.toUpperCase()} Server running on ${protocol}://${displayHost}:${this.port}`);
+        console.log(`📡 MCP endpoint: ${protocol}://${displayHost}:${this.port}/mcp`);
+        console.log(`❤️  Health check: ${protocol}://${displayHost}:${this.port}/health`);
+        if (this.useHttps && !(this.config as HttpTransportConfig).certPath) {
+          console.warn('⚠️  Using auto-generated self-signed certificate. For production, provide your own certificates.');
+          console.warn('   To trust this certificate in your browser, you may need to accept the security warning.');
+        }
         this.running = true;
         resolve();
-      });
+      };
+
+      try {
+        if (this.useHttps) {
+          // Generate self-signed certificate if none provided
+          if (!this.httpsOptions?.cert || !this.httpsOptions?.key) {
+            console.log('🔐 Generating self-signed certificate for HTTPS...');
+            const selfSigned = await generateSelfSignedCertificate();
+            this.httpsOptions = {
+              ...this.httpsOptions,
+              cert: selfSigned.cert,
+              key: selfSigned.key
+            };
+          }
+          this.server = https.createServer(this.httpsOptions, this.app);
+        } else {
+          this.server = http.createServer(this.app);
+        }
+        
+        this.server.listen(this.port, this.host, callback);
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 
@@ -218,12 +276,17 @@ export class HttpTransport extends MCPTransport {
         this.sharedTransport = null;
       }
 
-      // Close the HTTP server
-      this.server.close(() => {
-        console.log('HTTP transport stopped');
-        this.running = false;
+      // Close the HTTP/HTTPS server
+      if (this.server) {
+        this.server.close(() => {
+          const protocol = this.useHttps ? 'HTTPS' : 'HTTP';
+          console.log(`${protocol} transport stopped`);
+          this.running = false;
+          resolve();
+        });
+      } else {
         resolve();
-      });
+      }
     });
   }
 

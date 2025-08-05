@@ -10,14 +10,18 @@ dotenv.config();
 
 // Define CLI interface
 program
-  .name('@kadreio/mcp-claude-code')
-  .description('MCP Server with multiple transport support')
+  .name('@kadreio/mcp-coding-agents')
+  .description('MCP Server with multiple AI coding agents for enhanced development workflows')
   .version('1.0.0')
   .argument('[mode]', 'Transport mode (stdio or http)', 'http')
   .option('-t, --transport <type>', 'Transport type (stdio or http)')
   .option('-p, --port <port>', 'Port for HTTP transport', '3050')
   .option('--host <host>', 'Host for HTTP transport', '0.0.0.0')
   .option('--no-cors', 'Disable CORS for HTTP transport')
+  .option('--https', 'Enable HTTPS')
+  .option('--cert <path>', 'Path to SSL certificate file')
+  .option('--key <path>', 'Path to SSL private key file')
+  .option('--ca <path>', 'Path to SSL CA certificate file (optional)')
   .parse(process.argv);
 
 const options = program.opts();
@@ -51,7 +55,7 @@ async function main() {
   try {
     // Create core MCP server
     const coreServer = new CoreMCPServer({
-      name: '@kadreio/mcp-claude-code',
+      name: '@kadreio/mcp-coding-agents',
       version: '1.0.0',
     });
 
@@ -62,6 +66,10 @@ async function main() {
         port: parseInt(options.port),
         host: options.host,
         cors: options.cors !== false,
+        https: options.https,
+        certPath: options.cert,
+        keyPath: options.key,
+        caPath: options.ca,
       } : {},
     });
 
