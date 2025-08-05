@@ -1,4 +1,8 @@
-# @kadreio/mcp-claude-code
+# @kadreio/mcp-coding-agents
+
+[![CI](https://github.com/kadreio/mcp-coding-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/kadreio/mcp-coding-agents/actions/workflows/ci.yml)
+[![Release](https://github.com/kadreio/mcp-coding-agents/actions/workflows/release.yml/badge.svg)](https://github.com/kadreio/mcp-coding-agents/actions/workflows/release.yml)
+[![npm version](https://badge.fury.io/js/@kadreio%2Fmcp-coding-agents.svg)](https://www.npmjs.com/package/@kadreio/mcp-coding-agents)
 
 A transport-agnostic MCP (Model Context Protocol) server with Claude Code, Gemini, and Codex agent integrations. Supports both STDIO and HTTP transports for flexible AI model context management.
 
@@ -14,7 +18,7 @@ A transport-agnostic MCP (Model Context Protocol) server with Claude Code, Gemin
 ## Installation
 
 ```bash
-npm install -g @kadreio/mcp-claude-code
+npm install -g @kadreio/mcp-coding-agents
 ```
 
 ## Quick Start
@@ -223,3 +227,28 @@ See [CLAUDE.md](./CLAUDE.md) for development guidelines and architecture details
 ## License
 
 MIT
+## Contributing
+
+Contributions are welcome\! Please feel free to submit a Pull Request.
+
+### Development Setup
+
+```bash
+git clone https://github.com/kadreio/mcp-coding-agents.git
+cd mcp-coding-agents
+npm install
+npm test
+```
+
+### Releasing
+
+Releases are automated via GitHub Actions when you push a version tag:
+
+```bash
+npm run release:patch  # 1.0.0 → 1.0.1
+npm run release:minor  # 1.0.0 → 1.1.0
+npm run release:major  # 1.0.0 → 2.0.0
+npm run release:beta   # 1.0.0 → 1.0.1-beta.0
+```
+
+See [RELEASING.md](./RELEASING.md) for detailed release instructions.

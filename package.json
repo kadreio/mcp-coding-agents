@@ -1,6 +1,6 @@
 {
   "name": "@kadreio/mcp-coding-agents",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "main": "dist/index.js",
   "bin": {
     "mcp-coding-agents": "./dist/cli-unified.js"
@@ -25,7 +25,12 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:integration": "jest tests/integration"
+    "test:integration": "jest tests/integration",
+    "release": "./scripts/release.sh",
+    "release:patch": "./scripts/release.sh patch",
+    "release:minor": "./scripts/release.sh minor",
+    "release:major": "./scripts/release.sh major",
+    "release:beta": "./scripts/release.sh prerelease beta"
   },
   "author": "kardio",
   "license": "MIT",

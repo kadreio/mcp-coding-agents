@@ -4,7 +4,19 @@
       "Bash(npm init:*)",
       "Bash(grep:*)",
       "Bash(rm:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(docker compose:*)",
+      "Bash(devcontainer up:*)",
+      "Bash(npm run build:*)",
+      "Bash(timeout 5 npm run mcp:http:dev -- --https)",
+      "Bash(find:*)",
+      "Bash(npm test)",
+      "Bash(ls:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git reset:*)",
+      "Bash(git push:*)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a transport-agnostic MCP (Model Context Protocol) server that bridges Claude Code functionality with the standardized MCP protocol. The architecture cleanly separates business logic from transport concerns, supporting both HTTP and STDIO transport modes for flexible integration with MCP clients.
+This is a transport-agnostic MCP (Model Context Protocol) server that provides AI coding agents (Claude Code, Gemini, Codex) through a standardized protocol. The architecture cleanly separates business logic from transport concerns, supporting both HTTP/HTTPS and STDIO transport modes.
 
 ## Essential Commands
 
@@ -12,30 +12,6 @@ This is a transport-agnostic MCP (Model Context Protocol) server that bridges Cl
 ```bash
 npm run build              # Compile TypeScript to dist/
 npm run dev:watch         # Watch mode compilation
-```
-
-### Running the Server
-```bash
-# Default mode (HTTP) - for backward compatibility
-npm run mcp               # Production mode (requires build)
-npm run mcp:dev           # Development mode with ts-node
-
-# STDIO mode - for direct process communication
-npm run mcp:stdio         # Production mode (requires build)
-npm run mcp:stdio:dev     # Development mode with ts-node
-
-# HTTP mode - for network-based MCP clients
-npm run mcp:http          # Production mode (requires build)
-npm run mcp:http:dev      # Development mode with ts-node
-
-# Legacy endpoints (deprecated)
-npm run mcp:legacy        # Old HTTP server implementation
-npm run dev               # Express server with nodemon
-npm run start             # Express server production
-```
-
-### Testing
-```bash
 npm test                  # Run all tests
 npm test -- --watch       # Watch mode
 npm test tests/unit/claude-code-handler.test.ts  # Run single test file
@@ -43,48 +19,97 @@ npm run test:coverage     # Generate coverage report
 npm run test:integration  # Run integration tests only
 ```
 
-### CLI Usage
+### Running the Server
 ```bash
-# After building, the unified CLI supports multiple modes:
-node dist/cli-unified.js          # Default HTTP mode
-node dist/cli-unified.js stdio    # STDIO mode for process communication
-node dist/cli-unified.js http     # HTTP mode with SSE support
-node dist/cli-unified.js server   # Legacy alias for HTTP mode
+# Development mode (with ts-node)
+npm run mcp:http:dev      # HTTP mode on port 3050
+npm run mcp:http:dev -- --https  # HTTPS with auto-generated cert
+npm run mcp:stdio:dev     # STDIO mode for direct process communication
 
-# With options:
-node dist/cli-unified.js http --port 3051 --host 0.0.0.0
-node dist/cli-unified.js --transport stdio
+# Production mode (requires build)
+npm run mcp:http          # HTTP mode
+npm run mcp:stdio         # STDIO mode
+```
+
+### Release Process
+```bash
+# Releases are tag-based - push a tag to trigger automated NPM publish
+npm run release:patch     # Bug fixes: 1.0.0 → 1.0.1
+npm run release:minor     # New features: 1.0.0 → 1.1.0
+npm run release:major     # Breaking changes: 1.0.0 → 2.0.0
+npm run release:beta      # Pre-release: 1.0.0 → 1.0.1-beta.0
 ```
 
 ## Architecture Overview
 
-### Core Components
-- **CoreMCPServer** (`src/core/mcp-server-core.ts`): Transport-agnostic business logic
-- **Transport Interface** (`src/core/transport-interface.ts`): Abstract base for transports
-- **Transport Factory** (`src/core/transport-factory.ts`): Creates appropriate transport
+The system follows a layered architecture where transport concerns are completely separated from business logic:
 
-### Transport Layers
-The server implements two MCP transport modes:
-- **STDIO Transport** (`src/transports/stdio-transport.ts`): Direct process communication via stdin/stdout
-- **HTTP Transport** (`src/transports/http-transport.ts`): HTTP/SSE-based transport with session management
+```
+CLI Entry Point (cli-unified.ts)
+        ↓
+Transport Factory → Creates Transport Instance
+        ↓
+Transport Layer (HTTP/STDIO)
+        ↓
+CoreMCPServer (Business Logic)
+        ↓
+Agent Handlers (Claude/Gemini/Codex)
+```
 
-### Additional Components
-- **Unified CLI** (`src/cli-unified.ts`): Main entry point with transport selection
-- **Legacy CLI** (`src/cli.ts`): Backward compatibility wrapper (deprecated)
-- **Configuration** (`src/config/claude-code.ts`): Manages Claude Code settings from environment
-- **Tool System**: Extensible tool registration with built-in utilities and agent integrations
+### Core Architecture Decisions
 
-### Claude Code Integration
-The `claude_code_query` tool provides:
-- Real-time streaming of Claude responses via MCP notifications
-- Configurable permission modes and execution options
-- Message filtering and pagination support
-- Cancellation support through abort signals
+1. **Transport Agnostic Core**: `CoreMCPServer` contains all MCP protocol logic and tool implementations, with no knowledge of transport specifics.
 
-### Session Management (HTTP Mode)
-- Sessions created on `initialize` method
-- Session ID passed via `Mcp-Session-Id` header
-- Notifications streamed via Server-Sent Events
+2. **Session Management**: HTTP transport maintains sessions via `Mcp-Session-Id` header, enabling stateful interactions and SSE streaming.
+
+3. **Agent Integration Pattern**: Each AI agent (Claude, Gemini, Codex) follows the same pattern:
+   - Tool definition function returning MCP tool schema
+   - Handler function with streaming support via notifications
+   - Type guard for argument validation
+
+4. **Streaming Architecture**: 
+   - STDIO: Direct JSON-RPC messages
+   - HTTP: Server-Sent Events for notifications, with session-based routing
+
+### HTTPS Support
+
+The HTTP transport includes automatic HTTPS support with self-signed certificate generation:
+- When `--https` flag is used without certs, generates certificates on the fly
+- Uses OpenSSL if available, falls back to embedded certificate
+- Supports custom certificates via `--cert` and `--key` options
+
+## Key Implementation Patterns
+
+### Adding New Tools
+
+Tools are registered in `CoreMCPServer.handleListTools()`. Each tool requires:
+1. Schema definition in the tools array
+2. Handler case in `handleCallTool()` method
+3. Optional streaming support via `context.sendNotification`
+
+### Agent Integration
+
+Agents are integrated through a consistent pattern in `src/lib/agents/`:
+```typescript
+// Tool definition
+export function getAgentToolDefinition() { /* returns MCP tool schema */ }
+
+// Type guard
+export function isAgentQueryArgs(args: unknown): args is AgentQueryArgs { /* validation */ }
+
+// Handler with streaming
+export async function handleAgentQuery(
+  args: AgentQueryArgs,
+  sendNotification?: (notification: any) => Promise<void>,
+  signal?: AbortSignal
+): Promise<AgentResult> { /* implementation */ }
+```
+
+### Error Handling Strategy
+
+- Transport errors (connection, protocol) handled at transport layer
+- Business logic errors thrown as standard errors in CoreMCPServer
+- Agent-specific errors include detailed context for debugging
 
 ## Environment Configuration
 
@@ -92,41 +117,30 @@ Required:
 - `ANTHROPIC_API_KEY` - For Claude Code functionality
 
 Optional:
-- `MCP_PORT` (default: 3050) - HTTP MCP server port
+- `MCP_PORT` (default: 3050) - HTTP server port
 - `CLAUDE_CODE_ENABLE` (default: true) - Enable/disable Claude Code tool
-- `CLAUDE_CODE_DEFAULT_CWD` - Default working directory for Claude Code
+- `CLAUDE_CODE_DEFAULT_CWD` - Default working directory
 - `CLAUDE_CODE_DEFAULT_MODEL` - Default Claude model
 - `CLAUDE_CODE_DEFAULT_PERMISSION_MODE` - Permission mode (default: bypassPermissions)
+- `GEMINI_API_KEY` - For Gemini agent
+- `OPENAI_API_KEY` - For Codex agent
 
-## Key Implementation Details
+## Testing Strategy
 
-### Message Streaming
-In HTTP mode, Claude Code messages are streamed as MCP notifications:
-1. Tool call initiates Claude Code query
-2. Each message is sent as an MCP notification
-3. Final result includes filtered messages based on configuration
+### Unit Tests
+Focus on individual component behavior:
+- Schema validation
+- Message filtering logic
+- Configuration handling
 
-### Error Handling
-- Schema validation for all tool inputs
-- Graceful degradation when Claude Code is unavailable
-- Proper error responses following MCP protocol
+### Integration Tests
+Verify end-to-end MCP protocol compliance:
+- Full request/response cycles
+- Session management
+- Streaming notifications
 
-### Testing Approach
-- Unit tests focus on schema validation and message handling
-- Integration tests verify end-to-end MCP protocol compliance
-- Manual test scripts in `tests/scripts/` for debugging specific scenarios
-
-## Development Workflow
-
-1. Make changes to TypeScript source files
-2. Run `npm run dev:watch` in one terminal for compilation
-3. Run `npm run mcp:http:dev` in another for testing
-4. Use `tests/scripts/test-mcp-curl.sh` for quick manual testing
-5. Run `npm test` before committing
-
-## Debugging Tips
-
-- Check server logs for detailed error messages
-- Use `curl-examples.md` for testing HTTP endpoints
-- Enable debug logging by setting appropriate log levels
-- For streaming issues, test with `tests/scripts/test-sse.sh`
+### Manual Testing
+Scripts in `tests/scripts/` for specific scenarios:
+- `test-mcp-curl.sh` - Basic MCP operations
+- `test-sse.sh` - SSE streaming verification
+- `test-claude-code-sse.sh` - Claude Code streaming
