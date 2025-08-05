@@ -23,11 +23,11 @@ jobs:
       - name: Run linter
         run: npm run lint --if-present
       
-      - name: Run tests
-        run: npm test
-      
       - name: Build project
         run: npm run build
+      
+      - name: Run tests
+        run: npm test
 
   publish-npm:
     needs: test
