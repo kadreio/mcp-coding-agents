@@ -1,7 +1,11 @@
 import dotenv from 'dotenv';
 
+// Check if we're in STDIO mode
+const isStdio = process.argv.includes('stdio') || 
+                process.argv.includes('--transport') && process.argv[process.argv.indexOf('--transport') + 1] === 'stdio';
+
 // Load environment variables
-dotenv.config();
+dotenv.config({ quiet: isStdio });
 
 /**
  * Claude Code configuration from environment variables
@@ -39,11 +43,13 @@ export const claudeCodeConfig = {
   }
 };
 
-// Log configuration on startup
-console.log('[claude-code-config] Configuration loaded:', {
-  enabled: claudeCodeConfig.enabled,
-  defaults: {
-    ...claudeCodeConfig.defaults,
-    cwd: claudeCodeConfig.defaults.cwd === process.cwd() ? '<current-directory>' : claudeCodeConfig.defaults.cwd,
-  }
-});
+// Log configuration on startup (only in non-STDIO mode)
+if (!isStdio) {
+  console.log('[claude-code-config] Configuration loaded:', {
+    enabled: claudeCodeConfig.enabled,
+    defaults: {
+      ...claudeCodeConfig.defaults,
+      cwd: claudeCodeConfig.defaults.cwd === process.cwd() ? '<current-directory>' : claudeCodeConfig.defaults.cwd,
+    }
+  });
+}

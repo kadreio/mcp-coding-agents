@@ -36,9 +36,7 @@ export class StdioTransport extends MCPTransport {
       throw new Error('Transport not initialized. Call initialize() first.');
     }
 
-    console.error('🚀 MCP STDIO Server started');
-    console.error('📡 Listening on stdin/stdout for JSON-RPC messages');
-    console.error('💡 Use Ctrl+D (Unix) or Ctrl+Z (Windows) to exit');
+    // No logging in STDIO mode - it interferes with JSON-RPC protocol
     
     this.running = true;
 
@@ -58,7 +56,7 @@ export class StdioTransport extends MCPTransport {
       return;
     }
 
-    console.error('\n🛑 Shutting down STDIO transport...');
+    // No logging in STDIO mode
     
     if (this.transport) {
       await this.transport.close();
@@ -66,7 +64,6 @@ export class StdioTransport extends MCPTransport {
     }
 
     this.running = false;
-    console.error('✅ STDIO transport stopped');
   }
 
   private async handleShutdown(): Promise<void> {

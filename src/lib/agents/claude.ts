@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { query as claudeQuery, type SDKMessage } from '@anthropic-ai/claude-code';
 import { claudeCodeConfig } from '../../config/claude-code';
+import { log, error as logError } from '../../utils/logger';
 
 export interface ClaudeCodeQueryOptions {
   cwd?: string;
@@ -146,7 +147,7 @@ export async function handleClaudeCodeQuery(
   let sequence = 0;
   const startTime = Date.now();
   
-  console.log(`[claude_code_query] Starting query session ${sessionId}:`, {
+  log(`[claude_code_query] Starting query session ${sessionId}:`, {
     prompt: prompt.substring(0, 100) + '...',
     options: queryOptions
   });
@@ -154,7 +155,7 @@ export async function handleClaudeCodeQuery(
   // Handle cancellation from MCP client
   if (signal) {
     signal.addEventListener('abort', () => {
-      console.log(`[claude_code_query] Cancellation requested for session ${sessionId}`);
+      log(`[claude_code_query] Cancellation requested for session ${sessionId}`);
       queryOptions.abortController.abort();
     });
   }
@@ -170,7 +171,7 @@ export async function handleClaudeCodeQuery(
     for await (const message of query) {
       // Check if cancelled
       if (signal?.aborted) {
-        console.log(`[claude_code_query] Query cancelled for session ${sessionId}`);
+        log(`[claude_code_query] Query cancelled for session ${sessionId}`);
         break;
       }
       messages.push(message);
@@ -178,7 +179,7 @@ export async function handleClaudeCodeQuery(
       
       // Send notification if available
       if (sendNotification) {
-        console.log(`[claude_code_query] Sending notification for message ${sequence}`);
+        log(`[claude_code_query] Sending notification for message ${sequence}`);
         try {
           await sendNotification({
             method: "notifications/message",
@@ -193,15 +194,15 @@ export async function handleClaudeCodeQuery(
               })
             }
           });
-          console.log(`[claude_code_query] Notification sent successfully`);
+          log(`[claude_code_query] Notification sent successfully`);
         } catch (error) {
-          console.error(`[claude_code_query] Failed to send notification:`, error);
+          logError(`[claude_code_query] Failed to send notification:`, error);
         }
       } else {
-        console.log(`[claude_code_query] No sendNotification function available - client may not support SSE`);
+        log(`[claude_code_query] No sendNotification function available - client may not support SSE`);
       }
       
-      console.log(`[claude_code_query] Message ${sequence} (${message.type}):`, {
+      log(`[claude_code_query] Message ${sequence} (${message.type}):`, {
         sessionId,
         messageType: message.type
       });
@@ -241,7 +242,7 @@ export async function handleClaudeCodeQuery(
       };
     }
     
-    console.log(`[claude_code_query] Query completed:`, {
+    log(`[claude_code_query] Query completed:`, {
       sessionId,
       totalMessages: messages.length,
       executionTime,
@@ -267,7 +268,7 @@ export async function handleClaudeCodeQuery(
   } catch (error: any) {
     const isCancellation = error.name === 'AbortError' || signal?.aborted;
     
-    console.error(`[claude_code_query] Query ${isCancellation ? 'cancelled' : 'failed'}:`, {
+    logError(`[claude_code_query] Query ${isCancellation ? 'cancelled' : 'failed'}:`, {
       sessionId,
       error: error.message,
       errorName: error.name

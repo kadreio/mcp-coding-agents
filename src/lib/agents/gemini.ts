@@ -1,3 +1,4 @@
+import { log, error as logError } from '../../utils/logger';
 import { execSync } from 'child_process';
 
 export interface GeminiQueryArgs {
@@ -70,7 +71,7 @@ export async function handleGeminiQuery(
     throw new Error('Prompt is required for Gemini query');
   }
 
-  console.log(`[gemini_query] Executing query with prompt: ${prompt.substring(0, 100)}...`);
+  log(`[gemini_query] Executing query with prompt: ${prompt.substring(0, 100)}...`);
 
   try {
     // Check if cancelled before execution
@@ -84,7 +85,7 @@ export async function handleGeminiQuery(
     // Using -p flag to pass the prompt
     const command = `gemini -p -y "${prompt.replace(/"/g, '\\"')}"`;
     
-    console.log(`[gemini_query] Executing command: gemini -p"..."`);
+    log(`[gemini_query] Executing command: gemini -p"..."`);
     
     const output = execSync(command, {
       encoding: 'utf8',
@@ -97,8 +98,8 @@ export async function handleGeminiQuery(
     // Remove "Loaded cached credentials." from the output
     const cleanOutput = output.replace(/Loaded cached credentials\.\s*/g, '').trim();
     
-    console.log(`[gemini_query] Command executed successfully in ${executionTime}ms`);
-    console.log(`[gemini_query] Output length: ${cleanOutput.length} characters`);
+    log(`[gemini_query] Command executed successfully in ${executionTime}ms`);
+    log(`[gemini_query] Output length: ${cleanOutput.length} characters`);
 
     return {
       content: [
@@ -113,7 +114,7 @@ export async function handleGeminiQuery(
     const isCancellation = error.name === 'AbortError' || signal?.aborted;
     const isTimeout = error.code === 'ETIMEDOUT';
     
-    console.error(`[gemini_query] Query ${isCancellation ? 'cancelled' : 'failed'}:`, {
+    logError(`[gemini_query] Query ${isCancellation ? 'cancelled' : 'failed'}:`, {
       error: error.message,
       errorName: error.name,
       errorCode: error.code

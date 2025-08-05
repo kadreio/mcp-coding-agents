@@ -39,15 +39,30 @@ export interface MCPRequestContext {
  * Transport-agnostic design allows for multiple transport implementations
  */
 export class CoreMCPServer {
-  private server: Server;
+  private server!: Server; // Use definite assignment assertion since we initialize in constructor
   private config: ResolvedServerConfig;
+  private isStdio: boolean;
 
   constructor(config: CoreMCPServerConfig = {}) {
     this.config = {
-      name: config.name ?? '@kadreio/mcp-claude-code',
+      name: config.name ?? '@kadreio/mcp-coding-agents',
       version: config.version ?? '1.0.0',
     };
+    
+    // Check if we're in STDIO mode
+    this.isStdio = process.argv.includes('stdio') || 
+                   process.argv.includes('--transport') && process.argv[process.argv.indexOf('--transport') + 1] === 'stdio';
+                   
+    this.initializeServer();
+  }
 
+  private log(...args: any[]): void {
+    if (!this.isStdio) {
+      console.log(...args);
+    }
+  }
+
+  private initializeServer(): void {
     // Initialize the MCP SDK server
     this.server = new Server(
       {
@@ -211,7 +226,7 @@ export class CoreMCPServer {
           throw new Error('Command is required');
         }
 
-        console.log(`[execute_command] Request received:`, {
+        this.log(`[execute_command] Request received:`, {
           command,
           cwd: cwd || 'current directory',
           timeout
@@ -228,7 +243,7 @@ export class CoreMCPServer {
 
           const executionTime = Date.now() - startTime;
 
-          console.log(`[execute_command] Command executed successfully in ${executionTime}ms:`, {
+          this.log(`[execute_command] Command executed successfully in ${executionTime}ms:`, {
             command,
             outputLength: output.length,
             outputPreview: output.slice(0, 200) + (output.length > 200 ? '...' : '')
@@ -246,7 +261,7 @@ export class CoreMCPServer {
           const errorMessage = error.stderr || error.message || 'Command execution failed';
           const exitCode = error.status !== undefined ? error.status : 'unknown';
 
-          console.log(`[execute_command] Command failed:`, {
+          this.log(`[execute_command] Command failed:`, {
             command,
             exitCode,
             errorMessage
@@ -291,7 +306,7 @@ export class CoreMCPServer {
 
         // Check if we can stream (requires sendNotification)
         if (sendNotification) {
-          console.log('Streaming timestamps via notifications');
+          this.log('Streaming timestamps via notifications');
 
           // Send initial notification
           await sendNotification({
@@ -319,7 +334,7 @@ export class CoreMCPServer {
               }
             });
 
-            console.log(`Streamed timestamp ${i}: ${timestamp}`);
+            this.log(`Streamed timestamp ${i}: ${timestamp}`);
 
             if (i < 10) {
               await sleep(delay);
@@ -336,7 +351,7 @@ export class CoreMCPServer {
             ],
           };
         } else {
-          console.log('No notification support - returning all timestamps at once');
+          this.log('No notification support - returning all timestamps at once');
 
           // Fallback: Generate all timestamps with delays
           const timestamps = [];

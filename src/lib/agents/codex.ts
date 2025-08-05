@@ -1,3 +1,4 @@
+import { log, error as logError } from '../../utils/logger';
 import { spawn } from 'child_process';
 import { randomUUID } from 'crypto';
 
@@ -81,7 +82,7 @@ export async function handleCodexQuery(
   }
 
   const sessionId = randomUUID();
-  console.log(`[codex_query] Starting query session ${sessionId} with prompt: ${prompt.substring(0, 100)}...`);
+  log(`[codex_query] Starting query session ${sessionId} with prompt: ${prompt.substring(0, 100)}...`);
 
   return new Promise((resolve, reject) => {
     try {
@@ -103,12 +104,12 @@ export async function handleCodexQuery(
         stdio: ['ignore', 'pipe', 'pipe']
       });
 
-      console.log(`[codex_query] Spawned codex process with PID: ${codexProcess.pid}`);
+      log(`[codex_query] Spawned codex process with PID: ${codexProcess.pid}`);
 
       // Set up timeout
       if (timeout > 0) {
         timeoutHandle = setTimeout(() => {
-          console.log(`[codex_query] Timeout reached after ${timeout}ms`);
+          log(`[codex_query] Timeout reached after ${timeout}ms`);
           codexProcess.kill('SIGTERM');
           reject(new Error(`Codex query timed out after ${timeout}ms`));
         }, timeout);
@@ -117,7 +118,7 @@ export async function handleCodexQuery(
       // Handle abort signal
       if (signal) {
         signal.addEventListener('abort', () => {
-          console.log(`[codex_query] Cancellation requested for session ${sessionId}`);
+          log(`[codex_query] Cancellation requested for session ${sessionId}`);
           codexProcess.kill('SIGTERM');
           if (timeoutHandle) clearTimeout(timeoutHandle);
         });
@@ -141,11 +142,11 @@ export async function handleCodexQuery(
             // Check if this is an agent_message
             if (parsed.msg && parsed.msg.type === 'agent_message') {
               agentMessage = parsed.msg.message;
-              console.log(`[codex_query] Received agent message: ${agentMessage?.substring(0, 100) || agentMessage}...`);
+              log(`[codex_query] Received agent message: ${agentMessage?.substring(0, 100) || agentMessage}...`);
             } else {
               // Send all other messages as notifications
               if (sendNotification) {
-                console.log(`[codex_query] Sending notification for message ${messageCount} (${parsed.msg?.type || 'unknown'})`);
+                log(`[codex_query] Sending notification for message ${messageCount} (${parsed.msg?.type || 'unknown'})`);
                 try {
                   await sendNotification({
                     method: "notifications/message",
@@ -161,12 +162,12 @@ export async function handleCodexQuery(
                     }
                   });
                 } catch (error) {
-                  console.error(`[codex_query] Failed to send notification:`, error);
+                  logError(`[codex_query] Failed to send notification:`, error);
                 }
               }
             }
           } catch (error) {
-            console.error(`[codex_query] Failed to parse JSON line:`, line, error);
+            logError(`[codex_query] Failed to parse JSON line:`, line, error);
           }
         }
       });
@@ -174,7 +175,7 @@ export async function handleCodexQuery(
       // Process stderr data
       codexProcess.stderr.on('data', (data: Buffer) => {
         const errorText = data.toString();
-        console.error(`[codex_query] Stderr: ${errorText}`);
+        logError(`[codex_query] Stderr: ${errorText}`);
       });
 
       // Handle process exit
@@ -182,8 +183,8 @@ export async function handleCodexQuery(
         if (timeoutHandle) clearTimeout(timeoutHandle);
         
         const executionTime = Date.now() - startTime;
-        console.log(`[codex_query] Process exited with code ${code} after ${executionTime}ms`);
-        console.log(`[codex_query] Total messages processed: ${messageCount}`);
+        log(`[codex_query] Process exited with code ${code} after ${executionTime}ms`);
+        log(`[codex_query] Total messages processed: ${messageCount}`);
 
         if (signal?.aborted) {
           reject(new Error('Codex query was cancelled'));
@@ -206,7 +207,7 @@ export async function handleCodexQuery(
       codexProcess.on('error', (error: any) => {
         if (timeoutHandle) clearTimeout(timeoutHandle);
         
-        console.error(`[codex_query] Process error:`, error);
+        logError(`[codex_query] Process error:`, error);
         
         if (error.code === 'ENOENT') {
           reject(new Error('Codex command not found. Please ensure codex CLI is installed and in PATH'));
@@ -216,7 +217,7 @@ export async function handleCodexQuery(
       });
 
     } catch (error: any) {
-      console.error(`[codex_query] Unexpected error:`, error);
+      logError(`[codex_query] Unexpected error:`, error);
       reject(error);
     }
   });
