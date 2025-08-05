@@ -147,6 +147,46 @@ Transport Transport
 - `GET /health` - Health check endpoint
 - `GET /` - Server information and capabilities
 
+## HTTPS Support
+
+The server supports HTTPS for secure communication:
+
+### Quick Start (Auto-Generated Certificate)
+
+```bash
+# Run with HTTPS - automatically generates a self-signed certificate
+npx @kadreio/mcp-coding-agents http --https
+```
+
+This will automatically generate a self-signed certificate on the fly. Perfect for development!
+
+### Using Your Own Certificates
+
+```bash
+# Generate self-signed certificates
+./generate-certs.sh
+
+# Run with HTTPS using generated certificates
+npx @kadreio/mcp-coding-agents http --https --cert ./certs/server.cert --key ./certs/server.key
+```
+
+### Using Custom Certificates
+
+```bash
+# Run with your own certificates
+npx @kadreio/mcp-coding-agents http --https \
+  --cert /path/to/certificate.pem \
+  --key /path/to/private-key.pem \
+  --ca /path/to/ca-certificate.pem  # Optional CA certificate
+```
+
+### HTTPS Options
+
+- `--https` - Enable HTTPS mode
+- `--cert <path>` - Path to SSL certificate file
+- `--key <path>` - Path to SSL private key file
+- `--ca <path>` - Path to SSL CA certificate file (optional)
+
 ## MCP Client Configuration
 
 ### For STDIO mode

@@ -1,9 +1,9 @@
 {
-  "name": "@kadreio/mcp-claude-code",
-  "version": "1.0.0",
+  "name": "@kadreio/mcp-coding-agents",
+  "version": "1.0.1",
   "main": "dist/index.js",
   "bin": {
-    "mcp-claude-code": "./dist/cli-unified.js"
+    "mcp-coding-agents": "./dist/cli-unified.js"
   },
   "files": [
     "dist/**/*",
@@ -36,10 +36,10 @@
     "ai",
     "server"
   ],
-  "description": "MCP server with Claude Code integration for AI model context",
+  "description": "MCP server with multiple AI coding agents for enhanced development workflows",
   "repository": {
     "type": "git",
-    "url": "https://github.com/kardio/mcp-claude-code.git"
+    "url": "https://github.com/kadreio/mcp-coding-agents.git"
   },
   "engines": {
     "node": ">=18.0.0"

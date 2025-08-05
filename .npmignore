@@ -44,6 +44,9 @@ nodemon.json
 
 # Documentation source
 docs/
+CLAUDE.md
+curl-examples.md
+test.txt
 
 # Build artifacts
 *.map
