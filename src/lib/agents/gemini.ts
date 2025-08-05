@@ -47,7 +47,7 @@ export function getGeminiToolDefinition() {
           properties: {
             timeout: {
               type: 'number',
-              description: 'Command timeout in milliseconds (default: 30000)'
+              description: 'Command timeout in milliseconds (default: 0 which means no timeout)'
             }
           }
         }
@@ -65,7 +65,7 @@ export async function handleGeminiQuery(
   signal?: AbortSignal
 ): Promise<GeminiResult> {
   const { prompt, options = {} } = args;
-  const timeout = options.timeout || 30000;
+  const timeout = options.timeout || 0;
 
   if (!prompt) {
     throw new Error('Prompt is required for Gemini query');
@@ -87,11 +87,17 @@ export async function handleGeminiQuery(
     
     log(`[gemini_query] Executing command: gemini -p"..."`);
     
-    const output = execSync(command, {
+    const execOptions: any = {
       encoding: 'utf8',
-      timeout: timeout,
       stdio: 'pipe'
-    });
+    };
+    
+    // Only set timeout if it's greater than 0
+    if (timeout > 0) {
+      execOptions.timeout = timeout;
+    }
+    
+    const output = execSync(command, execOptions);
 
     const executionTime = Date.now() - startTime;
     

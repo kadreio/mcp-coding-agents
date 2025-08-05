@@ -11,6 +11,8 @@ export interface ClaudeCodeQueryOptions {
   permissionMode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
   maxMessages?: number;
   includeSystemMessages?: boolean;
+  sessionId?: string;
+  timeout?: number;
 }
 
 export interface ClaudeCodeQueryArgs {
@@ -95,6 +97,14 @@ export function getClaudeCodeToolDefinition() {
             includeSystemMessages: {
               type: 'boolean',
               description: `Include system messages in response (default: ${claudeCodeConfig.defaults.includeSystemMessages})`
+            },
+            sessionId: {
+              type: 'string',
+              description: 'Session ID from a previous Claude Code query to continue the conversation'
+            },
+            timeout: {
+              type: 'number',
+              description: 'Query timeout in milliseconds (default: 0 which means no timeout)'
             }
           }
         }
@@ -127,7 +137,7 @@ export async function handleClaudeCodeQuery(
   const mergedOptions = claudeCodeConfig.mergeOptions(requestOptions);
   
   // Set up query options
-  const queryOptions = {
+  const queryOptions: any = {
     cwd: mergedOptions.cwd,
     permissionMode: mergedOptions.permissionMode,
     maxTurns: mergedOptions.maxTurns,
@@ -137,25 +147,42 @@ export async function handleClaudeCodeQuery(
     abortController: new AbortController()
   };
   
-  // Response configuration
-  const maxMessages = mergedOptions.maxMessages;
-  const includeSystemMessages = mergedOptions.includeSystemMessages;
+  // Add resume option if sessionId is provided
+  if (requestOptions.sessionId) {
+    // Clean up sessionId - remove any surrounding quotes
+    const cleanSessionId = requestOptions.sessionId.replace(/^["']|["']$/g, '');
+    queryOptions.resume = cleanSessionId;
+  }
+  
+  // Response configuration no longer needed since we only return the final result
   
   // Track execution
-  const sessionId = randomUUID();
+  const sessionId = requestOptions.sessionId ? requestOptions.sessionId.replace(/^["']|["']$/g, '') : randomUUID();
   const messages: SDKMessage[] = [];
   let sequence = 0;
-  const startTime = Date.now();
   
-  log(`[claude_code_query] Starting query session ${sessionId}:`, {
+  log(`[claude_code_query] ${requestOptions.sessionId ? 'Resuming' : 'Starting'} query session ${sessionId}:`, {
     prompt: prompt.substring(0, 100) + '...',
-    options: queryOptions
+    options: queryOptions,
+    isResume: !!requestOptions.sessionId
   });
+  
+  // Handle timeout
+  const timeout = requestOptions.timeout || 0;
+  let timeoutHandle: NodeJS.Timeout | null = null;
+  
+  if (timeout > 0) {
+    timeoutHandle = setTimeout(() => {
+      log(`[claude_code_query] Timeout reached after ${timeout}ms for session ${sessionId}`);
+      queryOptions.abortController.abort();
+    }, timeout);
+  }
   
   // Handle cancellation from MCP client
   if (signal) {
     signal.addEventListener('abort', () => {
       log(`[claude_code_query] Cancellation requested for session ${sessionId}`);
+      if (timeoutHandle) clearTimeout(timeoutHandle);
       queryOptions.abortController.abort();
     });
   }
@@ -208,21 +235,12 @@ export async function handleClaudeCodeQuery(
       });
     }
     
-    // Filter messages based on options
-    let responseMessages = messages;
-    if (!includeSystemMessages) {
-      responseMessages = messages.filter(m => m.type !== 'system');
-    }
+    // We no longer need to filter or limit messages since we're only returning the final result
     
-    // Limit messages if needed
-    let truncated = false;
-    if (responseMessages.length > maxMessages) {
-      responseMessages = responseMessages.slice(-maxMessages);
-      truncated = true;
+    // Clear timeout if it was set
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
     }
-    
-    // Calculate execution time
-    const executionTime = Date.now() - startTime;
     
     // Extract result from the last message if it's a result type
     const lastMessage = messages[messages.length - 1];
@@ -245,51 +263,87 @@ export async function handleClaudeCodeQuery(
     log(`[claude_code_query] Query completed:`, {
       sessionId,
       totalMessages: messages.length,
-      executionTime,
       result
     });
+    
+    // Extract session_id from any message that has it
+    let claudeSessionId = null;
+    for (const msg of messages) {
+      if ('session_id' in msg) {
+        claudeSessionId = (msg as any).session_id;
+        break;
+      }
+    }
+    
+    // Build response object with result and session_id
+    const response = {
+      result: result?.summary || 'Query completed but no result text was available',
+      session_id: claudeSessionId
+    };
+    
+    // If we don't have a result summary, try to get the last assistant message
+    if (!result?.summary) {
+      const lastAssistantMessage = messages
+        .filter(m => m.type === 'assistant')
+        .pop();
+      
+      if (lastAssistantMessage && 'message' in lastAssistantMessage) {
+        const assistantMsg = lastAssistantMessage.message as any;
+        const textContent = assistantMsg.content?.find((c: any) => c.type === 'text');
+        if (textContent?.text) {
+          response.result = textContent.text;
+        }
+      }
+    }
     
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({
-            sessionId,
-            messages: responseMessages,
-            executionTime,
-            messageCount: messages.length,
-            truncated,
-            result
-          }, null, 2)
+          text: JSON.stringify(response)
         }
       ]
     };
     
   } catch (error: any) {
-    const isCancellation = error.name === 'AbortError' || signal?.aborted;
+    // Clear timeout if it was set
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
     
-    logError(`[claude_code_query] Query ${isCancellation ? 'cancelled' : 'failed'}:`, {
+    const isCancellation = error.name === 'AbortError' || signal?.aborted;
+    const isTimeout = isCancellation && timeout > 0 && !signal?.aborted;
+    
+    logError(`[claude_code_query] Query ${isTimeout ? 'timed out' : isCancellation ? 'cancelled' : 'failed'}:`, {
       sessionId,
       error: error.message,
       errorName: error.name
     });
+    
+    // Extract session_id from any message that has it
+    let claudeSessionId = null;
+    for (const msg of messages) {
+      if ('session_id' in msg) {
+        claudeSessionId = (msg as any).session_id;
+        break;
+      }
+    }
+    
+    // Return error with session_id
+    const errorMessage = isTimeout 
+      ? `Query timed out after ${timeout}ms` 
+      : isCancellation 
+        ? 'Query cancelled by user' 
+        : `Query failed: ${error.message}`;
     
     return {
       content: [
         {
           type: 'text',
           text: JSON.stringify({
-            sessionId,
-            error: error.message,
-            executionTime: Date.now() - startTime,
-            messages: messages.slice(-maxMessages), // Include partial results
-            messageCount: messages.length,
-            result: {
-              success: false,
-              summary: isCancellation ? 'Query cancelled' : 'Query failed',
-              error: isCancellation ? 'cancelled' : error.message
-            }
-          }, null, 2)
+            error: errorMessage,
+            session_id: claudeSessionId
+          })
         }
       ]
     };

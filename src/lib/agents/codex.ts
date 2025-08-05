@@ -56,7 +56,7 @@ export function getCodexToolDefinition() {
           properties: {
             timeout: {
               type: 'number',
-              description: 'Command timeout in milliseconds (default: 30000)'
+              description: 'Command timeout in milliseconds (default: 0 which means no timeout)'
             }
           }
         }
@@ -75,7 +75,7 @@ export async function handleCodexQuery(
   signal?: AbortSignal
 ): Promise<CodexResult> {
   const { prompt, options = {} } = args;
-  const timeout = options.timeout || 30000;
+  const timeout = options.timeout || 0;
 
   if (!prompt) {
     throw new Error('Prompt is required for Codex query');

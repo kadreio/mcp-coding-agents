@@ -141,7 +141,7 @@ export class CoreMCPServer {
           properties: {
             command: { type: 'string', description: 'The shell command to execute' },
             cwd: { type: 'string', description: 'Working directory for command execution (optional)' },
-            timeout: { type: 'number', description: 'Command timeout in milliseconds (optional, default: 30000)' },
+            timeout: { type: 'number', description: 'Command timeout in milliseconds (optional, default: 0 which means no timeout)' },
           },
           required: ['command'],
         },
@@ -220,7 +220,7 @@ export class CoreMCPServer {
       case 'execute_command': {
         const command = args?.command as string;
         const cwd = args?.cwd as string | undefined;
-        const timeout = args?.timeout as number | undefined || 30000;
+        const timeout = args?.timeout as number | undefined || 0;
 
         if (!command) {
           throw new Error('Command is required');
@@ -234,12 +234,18 @@ export class CoreMCPServer {
 
         try {
           const startTime = Date.now();
-          const output = execSync(command, {
+          const execOptions: any = {
             encoding: 'utf8',
             cwd: cwd || process.cwd(),
-            timeout: timeout,
             stdio: 'pipe',
-          });
+          };
+          
+          // Only set timeout if it's greater than 0
+          if (timeout > 0) {
+            execOptions.timeout = timeout;
+          }
+          
+          const output = execSync(command, execOptions);
 
           const executionTime = Date.now() - startTime;
 
