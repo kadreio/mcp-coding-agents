@@ -20,7 +20,7 @@ describe('CLI Basic Tests', () => {
       await new Promise<void>((resolve) => {
         child.on('exit', (code) => {
           expect(code).toBe(0);
-          expect(output).toContain('Usage: @kadreio/mcp-claude-code');
+          expect(output).toContain('Usage: @kadreio/mcp-coding-agents');
           expect(output).toContain('Transport mode');
           resolve();
         });

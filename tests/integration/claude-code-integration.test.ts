@@ -202,7 +202,7 @@ describe('Claude Code Integration Tests', () => {
       expect(response.contents.length).toBeGreaterThan(0);
       
       const content = JSON.parse((response.contents as any)[0].text);
-      expect(content.name).toBe('@kadreio/mcp-claude-code');
+      expect(content.name).toBe('@kadreio/mcp-coding-agents');
       expect(content.version).toBe('1.0.0');
     });
   });

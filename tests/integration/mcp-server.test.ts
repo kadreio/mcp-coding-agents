@@ -159,7 +159,7 @@ describe('MCP Streamable HTTP Server Integration Tests', () => {
       expect(result.contents[0].mimeType).toBe('application/json');
       
       const config = JSON.parse((result.contents as any)[0].text!);
-      expect(config.name).toBe('example-mcp-server');
+      expect(config.name).toBe('@kadreio/mcp-coding-agents');
       expect(config.version).toBe('1.0.0');
     });
 
@@ -189,15 +189,15 @@ describe('MCP Streamable HTTP Server Integration Tests', () => {
     test('should list available prompts', async () => {
       const response = await client.listPrompts();
       
-      expect(response.prompts).toHaveLength(2);
-      expect(response.prompts.map(p => p.name)).toContain('analyze_data');
-      expect(response.prompts.map(p => p.name)).toContain('debug_issue');
+      expect(response.prompts).toHaveLength(8);
+      expect(response.prompts.map(p => p.name)).toContain('commit');
+      expect(response.prompts.map(p => p.name)).toContain('plan');
     });
 
-    test('should get analyze_data prompt', async () => {
+    test('should get commit prompt', async () => {
       const result = await client.getPrompt({
-        name: 'analyze_data',
-        arguments: { data_type: 'sales metrics' }
+        name: 'commit',
+        arguments: {}
       });
 
       expect(result.messages).toHaveLength(1);
@@ -205,13 +205,13 @@ describe('MCP Streamable HTTP Server Integration Tests', () => {
       expect(result.messages[0].content.type).toBe('text');
       
       const content = result.messages[0].content as { type: 'text'; text: string };
-      expect(content.text).toContain('sales metrics');
+      expect(content.text).toContain('Bundle all outstanding');
     });
 
-    test('should get debug_issue prompt', async () => {
+    test('should get plan prompt', async () => {
       const result = await client.getPrompt({
-        name: 'debug_issue',
-        arguments: { error_message: 'Connection timeout' }
+        name: 'plan',
+        arguments: { feature_description: 'User authentication system' }
       });
 
       expect(result.messages).toHaveLength(1);
@@ -219,7 +219,7 @@ describe('MCP Streamable HTTP Server Integration Tests', () => {
       expect(result.messages[0].content.type).toBe('text');
       
       const content = result.messages[0].content as { type: 'text'; text: string };
-      expect(content.text).toContain('Connection timeout');
+      expect(content.text).toContain('User authentication system');
     });
 
     test('should handle invalid prompt name', async () => {

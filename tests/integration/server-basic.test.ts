@@ -127,6 +127,6 @@ describe('Server Basic Tests', () => {
     expect(response).toContain('"id":1');
     expect(response).toContain('"result"');
     expect(response).toContain('serverInfo');
-    expect(response).toContain('@kadreio/mcp-claude-code');
+    expect(response).toContain('@kadreio/mcp-coding-agents');
   }, 10000);
 });
