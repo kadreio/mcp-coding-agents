@@ -99,7 +99,7 @@ export async function handleCodexQuery(
 
       // Spawn the codex process
       const codexProcess = spawn('codex', ['exec', '--json', '--full-auto', prompt], {
-        env: { ...process.env, OPENAI_API_KEY: process.env.OPENAI_API_KEY || '' },
+        env: { ...process.env },
         stdio: ['ignore', 'pipe', 'pipe']
       });
 
