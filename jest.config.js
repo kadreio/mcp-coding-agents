@@ -21,6 +21,7 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
     // Mock the ESM modules that cause issues
     '@anthropic-ai/claude-code': '<rootDir>/tests/mocks/claude-code.mock.js',
+    'pkce-challenge': '<rootDir>/tests/mocks/pkce-challenge.js',
   },
   extensionsToTreatAsEsm: ['.ts'],
   transformIgnorePatterns: [
