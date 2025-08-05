@@ -5,8 +5,12 @@ import { CoreMCPServer } from './core/mcp-server-core';
 import { TransportFactory, TransportType } from './core/transport-factory';
 import { program } from 'commander';
 
+// Determine if we're in STDIO mode early to suppress logs
+const isStdio = process.argv.includes('stdio') || 
+                process.argv.includes('--transport') && process.argv[process.argv.indexOf('--transport') + 1] === 'stdio';
+
 // Load environment variables
-dotenv.config();
+dotenv.config({ quiet: isStdio });
 
 // Define CLI interface
 program
