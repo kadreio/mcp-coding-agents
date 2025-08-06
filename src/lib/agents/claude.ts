@@ -1,7 +1,10 @@
 import { randomUUID } from 'crypto';
-import { query as claudeQuery, type SDKMessage } from '@anthropic-ai/claude-code';
 import { claudeCodeConfig } from '../../config/claude-code';
 import { log, error as logError } from '../../utils/logger';
+
+// Dynamic import for ES module compatibility
+let claudeQuery: any;
+type SDKMessage = any;
 
 export interface ClaudeCodeQueryOptions {
   cwd?: string;
@@ -122,6 +125,12 @@ export async function handleClaudeCodeQuery(
   sendNotification?: (notification: ClaudeCodeNotification) => Promise<void>,
   signal?: AbortSignal
 ): Promise<ClaudeCodeResult> {
+  // Dynamic import for ES module compatibility
+  if (!claudeQuery) {
+    const claudeCodeModule = await import('@anthropic-ai/claude-code');
+    claudeQuery = claudeCodeModule.query;
+  }
+  
   // Check if tool is enabled
   if (!claudeCodeConfig.enabled) {
     throw new Error('Claude Code tool is disabled');
