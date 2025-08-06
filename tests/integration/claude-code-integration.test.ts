@@ -67,8 +67,9 @@ describe('Claude Code Integration Tests', () => {
       }
       
       // Create and connect client
+      // Use 127.0.0.1 instead of localhost to avoid IPv6 issues in CI
       transport = new StreamableHTTPClientTransport(
-        new URL(`http://localhost:${serverPort}/mcp`)
+        new URL(`http://127.0.0.1:${serverPort}/mcp`)
       );
       
       client = new Client({

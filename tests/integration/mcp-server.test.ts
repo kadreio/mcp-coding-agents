@@ -46,8 +46,9 @@ describe('MCP Streamable HTTP Server Integration Tests', () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Create client with streamable HTTP transport
+    // Use 127.0.0.1 instead of localhost to avoid IPv6 issues in CI
     transport = new StreamableHTTPClientTransport(
-      new URL(`http://localhost:${serverPort}/mcp`)
+      new URL(`http://127.0.0.1:${serverPort}/mcp`)
     );
     
     client = new Client({
