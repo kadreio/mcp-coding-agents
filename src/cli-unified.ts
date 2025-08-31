@@ -26,6 +26,7 @@ program
   .option('--cert <path>', 'Path to SSL certificate file')
   .option('--key <path>', 'Path to SSL private key file')
   .option('--ca <path>', 'Path to SSL CA certificate file (optional)')
+  .option('--no-auth', 'Disable API authentication (for development)')
   .parse(process.argv);
 
 const options = program.opts();
@@ -74,6 +75,11 @@ async function main() {
         certPath: options.cert,
         keyPath: options.key,
         caPath: options.ca,
+        claudeCodeApi: {
+          auth: {
+            enabled: options.auth !== false && process.env.CLAUDE_CODE_AUTH_ENABLED !== 'false'
+          }
+        }
       } : {},
     });
 

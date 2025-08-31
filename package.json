@@ -52,9 +52,14 @@
   "dependencies": {
     "@anthropic-ai/claude-code": "^1.0.58",
     "@modelcontextprotocol/sdk": "^1.15.1",
+    "@types/js-yaml": "^4.0.9",
+    "@types/swagger-ui-express": "^4.1.8",
     "commander": "^14.0.0",
     "dotenv": "^17.2.0",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "express-openapi-validator": "^5.5.8",
+    "js-yaml": "^4.1.0",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
