@@ -1,17 +1,23 @@
 import { randomUUID } from 'crypto';
 import { claudeCodeConfig } from '../../config/claude-code';
 import { log, error as logError } from '../../utils/logger';
+import type { 
+  SDKMessage, 
+  Options, 
+  PermissionMode, 
+  SDKResultMessage,
+  SDKAssistantMessage 
+} from '@anthropic-ai/claude-code';
 
 // Dynamic import for ES module compatibility
-let claudeQuery: any;
-type SDKMessage = any;
+let claudeQuery: typeof import('@anthropic-ai/claude-code').query;
 
 export interface ClaudeCodeQueryOptions {
   cwd?: string;
   maxTurns?: number;
   model?: string;
   appendSystemPrompt?: string;
-  permissionMode?: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan';
+  permissionMode?: PermissionMode;
   maxMessages?: number;
   includeSystemMessages?: boolean;
   sessionId?: string;
@@ -146,14 +152,17 @@ export async function handleClaudeCodeQuery(
   const mergedOptions = claudeCodeConfig.mergeOptions(requestOptions);
   
   // Set up query options
-  const queryOptions: any = {
+  const queryOptions: Partial<Options> = {
     cwd: mergedOptions.cwd,
     permissionMode: mergedOptions.permissionMode,
     maxTurns: mergedOptions.maxTurns,
-    model: mergedOptions.model,
+    // Only include model if it's defined, let SDK use its default otherwise
+    ...(mergedOptions.model !== undefined && { model: mergedOptions.model }),
     appendSystemPrompt: requestOptions.appendSystemPrompt, // This one doesn't have a default
-    // Add AbortController for cancellation support
-    abortController: new AbortController()
+    // Use provided AbortController or create a new one
+    abortController: (requestOptions as any).abortController || new AbortController(),
+    // Use the current Node.js executable directly to avoid PATH issues
+    executable: process.execPath as any // Use the full path to the current Node.js executable
   };
   
   // Add resume option if sessionId is provided
@@ -173,17 +182,23 @@ export async function handleClaudeCodeQuery(
   log(`[claude_code_query] ${requestOptions.sessionId ? 'Resuming' : 'Starting'} query session ${sessionId}:`, {
     prompt: prompt.substring(0, 100) + '...',
     options: queryOptions,
-    isResume: !!requestOptions.sessionId
+    isResume: !!requestOptions.sessionId,
+    nodeExecutable: process.execPath,
+    PATH: process.env.PATH?.substring(0, 200) + '...',
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ? '[SET]' : '[NOT SET]',
+    HOME: process.env.HOME,
+    claudeConfigExists: require('fs').existsSync(require('path').join(process.env.HOME || '', '.claude.json'))
   });
   
   // Handle timeout
   const timeout = requestOptions.timeout || 0;
   let timeoutHandle: NodeJS.Timeout | null = null;
   
-  if (timeout > 0) {
+  // Only set up timeout if timeout is specified and greater than 0
+  if (timeout && timeout > 0) {
     timeoutHandle = setTimeout(() => {
       log(`[claude_code_query] Timeout reached after ${timeout}ms for session ${sessionId}`);
-      queryOptions.abortController.abort();
+      queryOptions.abortController?.abort();
     }, timeout);
   }
   
@@ -192,7 +207,7 @@ export async function handleClaudeCodeQuery(
     signal.addEventListener('abort', () => {
       log(`[claude_code_query] Cancellation requested for session ${sessionId}`);
       if (timeoutHandle) clearTimeout(timeoutHandle);
-      queryOptions.abortController.abort();
+      queryOptions.abortController?.abort();
     });
   }
   
@@ -200,7 +215,7 @@ export async function handleClaudeCodeQuery(
     // Initialize the Claude Code query
     const query = claudeQuery({
       prompt,
-      options: queryOptions as any
+      options: queryOptions as Options
     });
     
     // Process messages from the async generator
@@ -254,17 +269,18 @@ export async function handleClaudeCodeQuery(
     // Extract result from the last message if it's a result type
     const lastMessage = messages[messages.length - 1];
     let result;
-    if (signal?.aborted) {
+    // Only check aborted signal if we actually broke out of the loop due to cancellation
+    if (signal?.aborted && messages.length === 0) {
       result = {
         success: false,
         summary: 'Query cancelled by user',
         error: 'cancelled'
       };
     } else if (lastMessage?.type === 'result') {
-      const resultMessage = lastMessage as any;
+      const resultMessage = lastMessage as SDKResultMessage;
       result = {
         success: !resultMessage.is_error,
-        summary: resultMessage.result || 'Query completed',
+        summary: resultMessage.subtype === 'success' ? (resultMessage as any).result : 'Query completed',
         error: resultMessage.is_error ? resultMessage.subtype : undefined
       };
     }
@@ -293,12 +309,11 @@ export async function handleClaudeCodeQuery(
     // If we don't have a result summary, try to get the last assistant message
     if (!result?.summary) {
       const lastAssistantMessage = messages
-        .filter(m => m.type === 'assistant')
+        .filter((m): m is SDKAssistantMessage => m.type === 'assistant')
         .pop();
       
-      if (lastAssistantMessage && 'message' in lastAssistantMessage) {
-        const assistantMsg = lastAssistantMessage.message as any;
-        const textContent = assistantMsg.content?.find((c: any) => c.type === 'text');
+      if (lastAssistantMessage) {
+        const textContent = lastAssistantMessage.message.content?.find((c: any) => c.type === 'text');
         if (textContent?.text) {
           response.result = textContent.text;
         }

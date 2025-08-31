@@ -34,7 +34,8 @@ export const claudeCodeConfig = {
       cwd: requestOptions.cwd || this.defaults.cwd,
       permissionMode: requestOptions.permissionMode || this.defaults.permissionMode,
       maxTurns: requestOptions.maxTurns !== undefined ? requestOptions.maxTurns : this.defaults.maxTurns,
-      model: requestOptions.model || this.defaults.model,
+      // Only set model if explicitly provided, otherwise let SDK use its default
+      model: requestOptions.model !== undefined ? requestOptions.model : this.defaults.model,
       maxMessages: requestOptions.maxMessages !== undefined ? requestOptions.maxMessages : this.defaults.maxMessages,
       includeSystemMessages: requestOptions.includeSystemMessages !== undefined 
         ? requestOptions.includeSystemMessages 
