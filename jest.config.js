@@ -22,10 +22,11 @@ module.exports = {
     // Mock the ESM modules that cause issues
     '@anthropic-ai/claude-code': '<rootDir>/tests/mocks/claude-code.mock.js',
     'pkce-challenge': '<rootDir>/tests/mocks/pkce-challenge.js',
+    'env-paths': '<rootDir>/tests/mocks/env-paths.js',
   },
   extensionsToTreatAsEsm: ['.ts'],
   transformIgnorePatterns: [
-    'node_modules/(?!(@anthropic-ai/claude-code)/)',
+    'node_modules/(?!(@anthropic-ai/claude-code|env-paths)/)',
   ],
   testTimeout: 30000, // 30 seconds for integration tests
 };
