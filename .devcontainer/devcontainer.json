@@ -64,5 +64,5 @@
   "postCreateCommand": ".devcontainer/setup-shell.sh",
   "postStartCommand": ".devcontainer/init-grafana-dashboards.sh",
   "remoteUser": "vscode",
-  "forwardPorts": [5432, 6379, 4222, 8222, 3100, 12345, 3000, 3200, 4317, 7878, 5173, 8080]
+  "forwardPorts": ["server:3050", "grafana:3000"]
 }
