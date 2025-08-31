@@ -29,6 +29,7 @@ services:
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=siai-api
       - OTEL_TRACES_SAMPLER=always_on
+      - MCP_DATABASE_PATH=/workspaces/siai/data/sessions.db
       # Client dev server runs in the same container
   loki:
     image: grafana/loki:3.0.0
