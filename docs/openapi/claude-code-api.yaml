@@ -1,0 +1,888 @@
+openapi: 3.1.0
+info:
+  title: Claude Code REST API
+  version: 1.0.0
+  description: REST API for interacting with Claude Code SDK
+  contact:
+    name: API Support
+    url: https://github.com/kadreio/mcp-coding-agents
+
+servers:
+  - url: http://localhost:3050/api/v1
+    description: Local development server
+  - url: https://api.example.com/api/v1
+    description: Production server
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /sessions:
+    post:
+      summary: Create a new Claude Code session
+      operationId: createSession
+      tags:
+        - Sessions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+      responses:
+        '201':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '429':
+          description: Maximum sessions limit reached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    get:
+      summary: List active sessions
+      operationId: listSessions
+      tags:
+        - Sessions
+      responses:
+        '200':
+          description: List of active sessions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionListResponse'
+
+  /sessions/{sessionId}:
+    get:
+      summary: Get session details
+      operationId: getSession
+      tags:
+        - Sessions
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionDetailResponse'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    delete:
+      summary: End a session
+      operationId: deleteSession
+      tags:
+        - Sessions
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '204':
+          description: Session deleted successfully
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /sessions/{sessionId}/messages:
+    post:
+      summary: Send a message to a session
+      operationId: sendMessage
+      tags:
+        - Messages
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '200':
+          description: Message response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/MessageResponse'
+                  - $ref: '#/components/schemas/StreamInfoResponse'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '408':
+          description: Request timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /sessions/{sessionId}/stream:
+    post:
+      summary: Stream Claude Code responses via Server-Sent Events
+      operationId: streamMessages
+      tags:
+        - Streaming
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StreamRequest'
+      responses:
+        '200':
+          description: Server-Sent Events stream
+          content:
+            text/event-stream:
+              schema:
+                $ref: '#/components/schemas/StreamEvents'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /models:
+    get:
+      summary: List available Claude models
+      operationId: listModels
+      tags:
+        - Models
+      security: []  # No auth required
+      responses:
+        '200':
+          description: List of available models
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelListResponse'
+
+  /health:
+    get:
+      summary: Health check endpoint
+      operationId: healthCheck
+      tags:
+        - Health
+      security: []  # No auth required
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API key for authentication
+
+  parameters:
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      description: Unique session identifier
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    # Request Schemas
+    CreateSessionRequest:
+      type: object
+      properties:
+        model:
+          type: string
+          default: claude-3-opus-20240229
+          description: Claude model to use
+        cwd:
+          type: string
+          description: Working directory for Claude Code
+          default: Current working directory
+        permissionMode:
+          $ref: '#/components/schemas/PermissionMode'
+        appendSystemPrompt:
+          type: string
+          description: Additional system instructions
+        maxTurns:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+          description: Maximum conversation turns
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Custom metadata for the session
+
+    SendMessageRequest:
+      type: object
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          description: The message to send to Claude
+        stream:
+          type: boolean
+          default: false
+          description: Whether to stream the response
+        timeout:
+          type: integer
+          minimum: 0
+          description: Timeout in milliseconds (0 = no timeout)
+
+    StreamRequest:
+      type: object
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          description: The message to send to Claude
+        timeout:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Timeout in milliseconds (0 = no timeout)
+
+    # Response Schemas
+    SessionResponse:
+      type: object
+      required:
+        - sessionId
+        - status
+        - createdAt
+        - expiresAt
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+          description: Unique session identifier
+        model:
+          type: string
+          description: Claude model being used
+        status:
+          $ref: '#/components/schemas/SessionStatus'
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+
+    SessionListResponse:
+      type: object
+      required:
+        - sessions
+        - total
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionSummary'
+        total:
+          type: integer
+          description: Total number of active sessions
+
+    SessionDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/SessionResponse'
+        - type: object
+          required:
+            - lastActivity
+            - messageCount
+          properties:
+            lastActivity:
+              type: string
+              format: date-time
+            messageCount:
+              type: integer
+              minimum: 0
+            config:
+              type: object
+              properties:
+                cwd:
+                  type: string
+                permissionMode:
+                  $ref: '#/components/schemas/PermissionMode'
+                maxTurns:
+                  type: integer
+            metadata:
+              type: object
+              additionalProperties: true
+
+    SessionSummary:
+      type: object
+      required:
+        - sessionId
+        - status
+        - createdAt
+        - expiresAt
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        model:
+          type: string
+        status:
+          $ref: '#/components/schemas/SessionStatus'
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties: true
+
+    MessageResponse:
+      type: object
+      required:
+        - messageId
+        - response
+      properties:
+        messageId:
+          type: string
+          format: uuid
+        response:
+          type: string
+          description: Claude's response text
+        sessionId:
+          type: string
+          description: Claude SDK session ID for resuming
+
+    StreamInfoResponse:
+      type: object
+      required:
+        - message
+        - streamUrl
+        - method
+        - headers
+        - body
+      properties:
+        message:
+          type: string
+          example: Use SSE endpoint for streaming responses
+        streamUrl:
+          type: string
+          example: /api/v1/sessions/123/stream
+        method:
+          type: string
+          enum: [POST]
+        headers:
+          type: object
+          properties:
+            Content-Type:
+              type: string
+              example: application/json
+            Accept:
+              type: string
+              example: text/event-stream
+        body:
+          type: object
+          properties:
+            prompt:
+              type: string
+            timeout:
+              type: integer
+
+    ModelListResponse:
+      type: object
+      required:
+        - models
+      properties:
+        models:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: string
+                example: claude-3-opus-20240229
+              name:
+                type: string
+                example: Claude 3 Opus
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - sessions
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        sessions:
+          type: object
+          required:
+            - active
+            - total
+          properties:
+            active:
+              type: integer
+              minimum: 0
+            total:
+              type: integer
+              minimum: 0
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - timestamp
+        - requestId
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              enum:
+                - SESSION_NOT_FOUND
+                - INVALID_REQUEST
+                - RATE_LIMIT_EXCEEDED
+                - MISSING_API_KEY
+                - INVALID_API_KEY
+                - MAX_SESSIONS_REACHED
+                - SESSION_CREATE_FAILED
+                - MESSAGE_SEND_FAILED
+                - REQUEST_TIMEOUT
+                - SSE_SETUP_FAILED
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+          format: uuid
+
+    # Claude Code SDK Types
+    PermissionMode:
+      type: string
+      enum:
+        - default
+        - acceptEdits
+        - bypassPermissions
+        - plan
+      description: Claude Code permission mode
+
+    # SSE Event Schemas
+    StreamEvents:
+      oneOf:
+        - $ref: '#/components/schemas/ConnectedEvent'
+        - $ref: '#/components/schemas/MessageEvent'
+        - $ref: '#/components/schemas/CompleteEvent'
+        - $ref: '#/components/schemas/ErrorEvent'
+
+    ConnectedEvent:
+      type: object
+      required:
+        - event
+        - data
+      properties:
+        event:
+          type: string
+          enum: [connected]
+        data:
+          type: object
+          required:
+            - sessionId
+          properties:
+            sessionId:
+              type: string
+              format: uuid
+
+    MessageEvent:
+      type: object
+      required:
+        - event
+        - data
+      properties:
+        event:
+          type: string
+          enum: [message]
+        data:
+          $ref: '#/components/schemas/ClaudeCodeMessage'
+
+    CompleteEvent:
+      type: object
+      required:
+        - event
+        - data
+      properties:
+        event:
+          type: string
+          enum: [complete]
+        data:
+          type: object
+          required:
+            - summary
+          properties:
+            summary:
+              type: string
+            sessionId:
+              type: string
+              description: Claude SDK session ID
+
+    ErrorEvent:
+      type: object
+      required:
+        - event
+        - data
+      properties:
+        event:
+          type: string
+          enum: [error]
+        data:
+          type: object
+          required:
+            - error
+          properties:
+            error:
+              type: string
+
+    # Claude Code SDK Message Types
+    ClaudeCodeMessage:
+      type: object
+      required:
+        - type
+        - sessionId
+        - timestamp
+        - sequence
+      properties:
+        type:
+          type: string
+          enum: [claude_code_message]
+        sessionId:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        sequence:
+          type: integer
+        message:
+          oneOf:
+            - $ref: '#/components/schemas/SDKAssistantMessage'
+            - $ref: '#/components/schemas/SDKUserMessage'
+            - $ref: '#/components/schemas/SDKResultMessage'
+            - $ref: '#/components/schemas/SDKSystemMessage'
+
+    SDKAssistantMessage:
+      type: object
+      required:
+        - type
+        - message
+        - parent_tool_use_id
+        - session_id
+      properties:
+        type:
+          type: string
+          enum: [assistant]
+        message:
+          $ref: '#/components/schemas/AnthropicAssistantMessage'
+        parent_tool_use_id:
+          type: string
+          nullable: true
+        session_id:
+          type: string
+
+    SDKUserMessage:
+      type: object
+      required:
+        - type
+        - message
+        - parent_tool_use_id
+        - session_id
+      properties:
+        type:
+          type: string
+          enum: [user]
+        message:
+          $ref: '#/components/schemas/AnthropicUserMessage'
+        parent_tool_use_id:
+          type: string
+          nullable: true
+        session_id:
+          type: string
+
+    SDKResultMessage:
+      oneOf:
+        - $ref: '#/components/schemas/SDKResultSuccess'
+        - $ref: '#/components/schemas/SDKResultError'
+      discriminator:
+        propertyName: subtype
+        mapping:
+          success: '#/components/schemas/SDKResultSuccess'
+          error_max_turns: '#/components/schemas/SDKResultError'
+          error_during_execution: '#/components/schemas/SDKResultError'
+
+    SDKResultSuccess:
+      type: object
+      required:
+        - type
+        - subtype
+        - duration_ms
+        - duration_api_ms
+        - is_error
+        - num_turns
+        - result
+        - session_id
+        - total_cost_usd
+        - usage
+      properties:
+        type:
+          type: string
+          enum: [result]
+        subtype:
+          type: string
+          enum: [success]
+        duration_ms:
+          type: integer
+        duration_api_ms:
+          type: integer
+        is_error:
+          type: boolean
+          enum: [false]
+        num_turns:
+          type: integer
+        result:
+          type: string
+        session_id:
+          type: string
+        total_cost_usd:
+          type: number
+        usage:
+          $ref: '#/components/schemas/NonNullableUsage'
+
+    SDKResultError:
+      type: object
+      required:
+        - type
+        - subtype
+        - duration_ms
+        - duration_api_ms
+        - is_error
+        - num_turns
+        - session_id
+        - total_cost_usd
+        - usage
+      properties:
+        type:
+          type: string
+          enum: [result]
+        subtype:
+          type: string
+          enum: [error_max_turns, error_during_execution]
+        duration_ms:
+          type: integer
+        duration_api_ms:
+          type: integer
+        is_error:
+          type: boolean
+          enum: [true]
+        num_turns:
+          type: integer
+        session_id:
+          type: string
+        total_cost_usd:
+          type: number
+        usage:
+          $ref: '#/components/schemas/NonNullableUsage'
+
+    SDKSystemMessage:
+      type: object
+      required:
+        - type
+        - subtype
+        - apiKeySource
+        - cwd
+        - session_id
+        - tools
+        - mcp_servers
+        - model
+        - permissionMode
+      properties:
+        type:
+          type: string
+          enum: [system]
+        subtype:
+          type: string
+          enum: [init]
+        apiKeySource:
+          type: string
+          enum: [user, project, org, temporary]
+        cwd:
+          type: string
+        session_id:
+          type: string
+        tools:
+          type: array
+          items:
+            type: string
+        mcp_servers:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - status
+            properties:
+              name:
+                type: string
+              status:
+                type: string
+        model:
+          type: string
+        permissionMode:
+          $ref: '#/components/schemas/PermissionMode'
+
+    # Anthropic SDK Types (simplified)
+    AnthropicAssistantMessage:
+      type: object
+      required:
+        - id
+        - type
+        - role
+        - content
+        - model
+        - usage
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [message]
+        role:
+          type: string
+          enum: [assistant]
+        content:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/TextContent'
+              - $ref: '#/components/schemas/ToolUseContent'
+        model:
+          type: string
+        usage:
+          $ref: '#/components/schemas/Usage'
+
+    AnthropicUserMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [user]
+        content:
+          type: string
+
+    TextContent:
+      type: object
+      required:
+        - type
+        - text
+      properties:
+        type:
+          type: string
+          enum: [text]
+        text:
+          type: string
+
+    ToolUseContent:
+      type: object
+      required:
+        - type
+        - id
+        - name
+        - input
+      properties:
+        type:
+          type: string
+          enum: [tool_use]
+        id:
+          type: string
+        name:
+          type: string
+        input:
+          type: object
+          additionalProperties: true
+
+    Usage:
+      type: object
+      properties:
+        input_tokens:
+          type: integer
+          nullable: true
+        output_tokens:
+          type: integer
+          nullable: true
+
+    NonNullableUsage:
+      type: object
+      required:
+        - input_tokens
+        - output_tokens
+      properties:
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+
+    SessionStatus:
+      type: string
+      enum:
+        - active
+        - expired
+        - ended
+
+tags:
+  - name: Sessions
+    description: Session management operations
+  - name: Messages
+    description: Message operations
+  - name: Streaming
+    description: Server-Sent Events streaming
+  - name: Models
+    description: Model information
+  - name: Health
+    description: Service health monitoring

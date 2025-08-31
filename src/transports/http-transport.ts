@@ -9,6 +9,9 @@ import * as https from 'https';
 import * as http from 'http';
 import * as fs from 'fs';
 import { generateSelfSignedCertificate } from '../utils/self-signed-cert';
+import { createClaudeCodeApi, ClaudeCodeApiConfig } from '../api/claude-code-api';
+import { setupSwaggerMiddleware, SwaggerMiddlewareConfig } from '../middleware/swagger-middleware';
+import { ApiInfoResponse } from '../api/types';
 
 export interface HttpTransportConfig extends TransportConfig {
   port?: number;
@@ -18,6 +21,8 @@ export interface HttpTransportConfig extends TransportConfig {
   certPath?: string;
   keyPath?: string;
   caPath?: string;
+  claudeCodeApi?: ClaudeCodeApiConfig & { enabled?: boolean };
+  swagger?: SwaggerMiddlewareConfig;
 }
 
 /**
@@ -89,6 +94,16 @@ export class HttpTransport extends MCPTransport {
   }
 
   private setupRoutes(): void {
+    // Mount Claude Code REST API if enabled
+    if (this.config.claudeCodeApi?.enabled !== false) {
+      const claudeCodeRouter = createClaudeCodeApi(this.config.claudeCodeApi || {});
+      this.app.use('/api/v1', claudeCodeRouter);
+      console.log('Claude Code REST API mounted at /api/v1');
+    }
+
+    // Setup Swagger documentation if enabled
+    setupSwaggerMiddleware(this.app, this.config.swagger);
+
     // MCP endpoint handler
     this.app.post('/mcp', async (req: Request, res: Response) => {
       const sessionId = req.headers['mcp-session-id'] as string;
@@ -191,23 +206,56 @@ export class HttpTransport extends MCPTransport {
         transport: 'HTTP',
         timestamp: new Date().toISOString(),
         activeSessions: this.transports.size,
+        apis: {
+          mcp: {
+            enabled: true,
+            endpoint: '/mcp'
+          },
+          claudeCode: {
+            enabled: this.config.claudeCodeApi?.enabled !== false,
+            endpoint: '/api/v1'
+          }
+        }
       });
     });
 
     // Root endpoint with API info
     this.app.get('/', (_req: Request, res: Response) => {
-      // For now, return static info. We can enhance this later to query the core server
-      res.json({
+      const response: ApiInfoResponse = {
         name: '@kadreio/mcp-claude-code',
         version: '1.0.0',
         transport: 'HTTP',
-        endpoint: '/mcp',
-        capabilities: {
-          tools: ['calculate_bmi', 'get_timestamp', 'execute_command', 'stream_sse_timestamps', 'claude_code_query', 'gemini_query', 'codex_query'],
-          resources: ['config://server', 'stats://system'],
-          prompts: Object.keys(promptsData.prompts)
+        apis: {
+          mcp: {
+            endpoint: '/mcp',
+            capabilities: {
+              tools: ['calculate_bmi', 'get_timestamp', 'execute_command', 'stream_sse_timestamps', 'claude_code_query', 'gemini_query', 'codex_query'],
+              resources: ['config://server', 'stats://system'],
+              prompts: Object.keys(promptsData.prompts)
+            }
+          }
         }
-      });
+      };
+
+      // Add Claude Code API info if enabled
+      if (this.config.claudeCodeApi?.enabled !== false) {
+        response.apis.claudeCode = {
+          endpoint: '/api/v1',
+          documentation: '/api/v1/docs',
+          endpoints: [
+            'POST /api/v1/sessions',
+            'GET /api/v1/sessions',
+            'GET /api/v1/sessions/:id',
+            'DELETE /api/v1/sessions/:id',
+            'POST /api/v1/sessions/:id/messages',
+            'POST /api/v1/sessions/:id/stream',
+            'GET /api/v1/models',
+            'GET /api/v1/health'
+          ]
+        };
+      }
+
+      res.json(response);
     });
   }
 
@@ -222,6 +270,9 @@ export class HttpTransport extends MCPTransport {
         const protocol = this.useHttps ? 'https' : 'http';
         console.log(`🚀 MCP ${protocol.toUpperCase()} Server running on ${protocol}://${displayHost}:${this.port}`);
         console.log(`📡 MCP endpoint: ${protocol}://${displayHost}:${this.port}/mcp`);
+        if (this.config.claudeCodeApi?.enabled !== false) {
+          console.log(`🤖 Claude Code API: ${protocol}://${displayHost}:${this.port}/api/v1`);
+        }
         console.log(`❤️  Health check: ${protocol}://${displayHost}:${this.port}/health`);
         if (this.useHttps && !(this.config as HttpTransportConfig).certPath) {
           console.warn('⚠️  Using auto-generated self-signed certificate. For production, provide your own certificates.');
