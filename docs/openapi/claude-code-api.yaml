@@ -130,6 +130,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    get:
+      summary: Get message history for a session
+      operationId: getMessages
+      tags:
+        - Messages
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - name: limit
+          in: query
+          description: Maximum number of messages to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+        - name: offset
+          in: query
+          description: Number of messages to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Message history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageHistoryResponse'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /sessions/{sessionId}/stream:
     post:
@@ -408,6 +443,74 @@ components:
               type: string
             timeout:
               type: integer
+    
+    MessageHistoryResponse:
+      type: object
+      required:
+        - sessionId
+        - messages
+        - pagination
+      properties:
+        sessionId:
+          type: string
+          format: uuid
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageRecord'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+    
+    MessageRecord:
+      type: object
+      required:
+        - id
+        - type
+        - content
+        - sequence
+        - timestamp
+      properties:
+        id:
+          type: integer
+          description: Message ID
+        type:
+          type: string
+          description: Message type (user, assistant, result, system)
+        subtype:
+          type: string
+          nullable: true
+          description: Message subtype
+        content:
+          type: object
+          description: Full message content
+        sequence:
+          type: integer
+          description: Message sequence number in conversation
+        timestamp:
+          type: string
+          format: date-time
+          description: When the message was created
+    
+    PaginationInfo:
+      type: object
+      required:
+        - limit
+        - offset
+        - total
+        - hasMore
+      properties:
+        limit:
+          type: integer
+          description: Maximum number of items per page
+        offset:
+          type: integer
+          description: Number of items skipped
+        total:
+          type: integer
+          description: Total number of items available
+        hasMore:
+          type: boolean
+          description: Whether more items are available
 
     ModelListResponse:
       type: object

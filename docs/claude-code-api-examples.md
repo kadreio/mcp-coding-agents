@@ -9,6 +9,7 @@ This document provides examples of how to use the Claude Code REST API with vari
 - `GET /api/v1/sessions/:id` - Get session details
 - `DELETE /api/v1/sessions/:id` - End a session
 - `POST /api/v1/sessions/:id/messages` - Send a message to a session
+- `GET /api/v1/sessions/:id/messages` - Get message history for a session
 - `POST /api/v1/sessions/:id/stream` - SSE endpoint for streaming responses
 - `GET /api/v1/models` - List available models
 - `GET /api/v1/health` - Health check
