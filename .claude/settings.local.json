@@ -19,7 +19,10 @@
       "Bash(sed:*)",
       "Bash(git stash:*)",
       "Bash(npm version:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git describe:*)",
+      "Bash(npm run release:patch:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }
