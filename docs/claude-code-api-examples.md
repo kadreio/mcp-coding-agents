@@ -52,7 +52,19 @@ async function claudeCodeExample() {
 
   console.log('Response:', messageResponse.data.response);
 
-  // 3. Stream a response
+  // 3. Get message history
+  const historyResponse = await axios.get(`${API_BASE}/sessions/${sessionId}/messages`, {
+    headers: { 'x-api-key': API_KEY },
+    params: { limit: 50, offset: 0 }
+  });
+
+  console.log('Total messages:', historyResponse.data.pagination.total);
+  historyResponse.data.messages.forEach(msg => {
+    const text = msg.content?.message?.content?.[0]?.text || '...';
+    console.log(`  ${msg.type}: ${msg.source} - ${text.substring(0, 100)}`);
+  });
+
+  // 4. Stream a response
   // First, create a helper to stream with POST
   const streamResponse = await fetch(`${API_BASE}/sessions/${sessionId}/stream`, {
     method: 'POST',
@@ -126,7 +138,17 @@ def claude_code_example():
     
     print(f'Response: {message_response.json()["response"]}')
     
-    # 3. Stream a response
+    # 3. Get message history
+    history_response = requests.get(f'{API_BASE}/sessions/{session_id}/messages',
+        headers=headers,
+        params={'limit': 50, 'offset': 0})
+    
+    history = history_response.json()
+    print(f'Total messages: {history["pagination"]["total"]}')
+    for msg in history['messages']:
+        print(f'  {msg["type"]}: {msg["source"]} - {msg.get("content", {}).get("message", {}).get("content", [{}])[0].get("text", "...")[:100]}')
+    
+    # 4. Stream a response
     # Connect to SSE stream with POST
     response = requests.post(f'{API_BASE}/sessions/{session_id}/stream',
         headers={
