@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'crypto';
-import { ClaudeCodeSessionManager } from './session-manager';
+import { ClaudeCodeSessionManager } from './session-manager-sqlite';
 import { handleClaudeCodeQuery } from '../lib/agents/claude';
 import { log, error as logError } from '../utils/logger';
 import { createAuthMiddleware, createRateLimitMiddleware, AuthConfig, RateLimitConfig } from './auth-middleware';
@@ -270,9 +270,37 @@ export function createClaudeCodeApi(config: ClaudeCodeApiConfig = {}): Router {
         }
       };
 
+      // Save the user message manually since SDK doesn't emit it
+      const userMessage = {
+        type: 'user',
+        message: {
+          role: 'user',
+          content: [{ type: 'text', text: body.prompt }]
+        },
+        parent_tool_use_id: null,
+        session_id: session.claudeSessionId || 'pending'
+      };
+      sessionManager.saveMessage(req.params.id, userMessage, 0, 'user');
+
+      // Create a notification handler to save messages even for non-streaming
+      const saveNotification = async (notification: any) => {
+        try {
+          const data = typeof notification.params.data === 'string' 
+            ? JSON.parse(notification.params.data)
+            : notification.params.data;
+          
+          // Save message to database if it's a Claude Code message
+          if (data.type === 'claude_code_message' && data.message) {
+            sessionManager.saveMessage(req.params.id, data.message, data.sequence);
+          }
+        } catch (error) {
+          logError('[claude-api] Failed to save message:', error);
+        }
+      };
+
       // For non-streaming requests, we don't need abort handling
       // since the response is sent all at once
-      const result = await handleClaudeCodeQuery(args);
+      const result = await handleClaudeCodeQuery(args, saveNotification);
       
       // Parse the result to extract session ID
       let responseData;
@@ -378,6 +406,18 @@ export function createClaudeCodeApi(config: ClaudeCodeApiConfig = {}): Router {
       // Update session activity
       sessionManager.updateActivity(req.params.id);
 
+      // Save the user message manually since SDK doesn't emit it
+      const userMessage = {
+        type: 'user',
+        message: {
+          role: 'user',
+          content: [{ type: 'text', text: prompt }]
+        },
+        parent_tool_use_id: null,
+        session_id: session.claudeSessionId || 'pending'
+      };
+      sessionManager.saveMessage(req.params.id, userMessage, 0, 'user');
+
       // Create notification handler for SSE
       const sendNotification = async (notification: any) => {
         try {
@@ -385,6 +425,11 @@ export function createClaudeCodeApi(config: ClaudeCodeApiConfig = {}): Router {
           const data = typeof notification.params.data === 'string' 
             ? JSON.parse(notification.params.data)
             : notification.params.data;
+          
+          // Save message to database if it's a Claude Code message
+          if (data.type === 'claude_code_message' && data.message) {
+            sessionManager.saveMessage(req.params.id, data.message, data.sequence);
+          }
           
           // Send as SSE event
           res.write(`event: message\ndata: ${JSON.stringify(data)}\n\n`);
@@ -459,6 +504,51 @@ export function createClaudeCodeApi(config: ClaudeCodeApiConfig = {}): Router {
     } catch (error) {
       logError('[claude-api] Failed to setup SSE:', error);
       handleError(res, 'SSE_SETUP_FAILED', getErrorMessage(error), 500);
+    }
+  });
+
+  /**
+   * GET /api/v1/sessions/:id/messages
+   * Get message history for a session
+   */
+  router.get('/sessions/:id/messages', async (req: Request, res: Response) => {
+    try {
+      const session = sessionManager.getSession(req.params.id);
+      
+      if (!session) {
+        handleError(res, 'SESSION_NOT_FOUND', `Session ${req.params.id} not found`, 404);
+        return;
+      }
+
+      // Parse query parameters
+      const limit = parseInt(req.query.limit as string) || 100;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      // Get messages from database
+      const messages = sessionManager.getMessages(req.params.id, limit, offset);
+      const totalCount = sessionManager.getMessageCount(req.params.id);
+
+      res.json({
+        sessionId: req.params.id,
+        messages: messages.map(msg => ({
+          id: msg.id,
+          type: msg.messageType,
+          subtype: msg.messageSubtype,
+          content: JSON.parse(msg.content),
+          sequence: msg.sequence,
+          timestamp: msg.timestamp,
+          source: msg.source
+        })),
+        pagination: {
+          limit,
+          offset,
+          total: totalCount,
+          hasMore: offset + messages.length < totalCount
+        }
+      });
+    } catch (error) {
+      logError('[claude-api] Failed to get messages:', error);
+      handleError(res, 'GET_MESSAGES_FAILED', getErrorMessage(error), 500);
     }
   });
 

@@ -45,3 +45,8 @@ build/
 # Temporary files
 tmp/
 temp/certs/
+
+# Database files
+data/
+*.db
+*.sqlite

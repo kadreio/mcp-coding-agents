@@ -1,17 +1,17 @@
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { randomUUID } from 'crypto';
-import express, { NextFunction, Request, Response, Application } from 'express';
-import { MCPTransport, TransportConfig } from '../core/transport-interface';
-import { CoreMCPServer } from '../core/mcp-server-core';
-import * as promptsData from '../lib/prompts.json';
-import * as https from 'https';
-import * as http from 'http';
+import express, { Application, NextFunction, Request, Response } from 'express';
 import * as fs from 'fs';
-import { generateSelfSignedCertificate } from '../utils/self-signed-cert';
-import { createClaudeCodeApi, ClaudeCodeApiConfig } from '../api/claude-code-api';
-import { setupSwaggerMiddleware, SwaggerMiddlewareConfig } from '../middleware/swagger-middleware';
+import * as http from 'http';
+import * as https from 'https';
+import { ClaudeCodeApiConfig, createClaudeCodeApi } from '../api/claude-code-api';
 import { ApiInfoResponse } from '../api/types';
+import { CoreMCPServer } from '../core/mcp-server-core';
+import { MCPTransport, TransportConfig } from '../core/transport-interface';
+import * as promptsData from '../lib/prompts.json';
+import { setupSwaggerMiddleware, SwaggerMiddlewareConfig } from '../middleware/swagger-middleware';
+import { generateSelfSignedCertificate } from '../utils/self-signed-cert';
 
 export interface HttpTransportConfig extends TransportConfig {
   port?: number;
@@ -21,7 +21,7 @@ export interface HttpTransportConfig extends TransportConfig {
   certPath?: string;
   keyPath?: string;
   caPath?: string;
-  claudeCodeApi?: ClaudeCodeApiConfig & { enabled?: boolean };
+  claudeCodeApi?: ClaudeCodeApiConfig & { enabled?: boolean }; 
   swagger?: SwaggerMiddlewareConfig;
 }
 
