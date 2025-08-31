@@ -21,6 +21,27 @@ A transport-agnostic MCP (Model Context Protocol) server with Claude Code, Gemin
 npm install -g @kadreio/mcp-coding-agents
 ```
 
+### Native Dependencies
+
+This package uses `better-sqlite3` for session persistence, which requires compilation of native code. On most systems, prebuilt binaries are available and installation is automatic. If you encounter issues:
+
+**macOS/Linux**: Ensure you have build tools installed:
+```bash
+# macOS
+xcode-select --install
+
+# Ubuntu/Debian
+sudo apt-get install build-essential
+
+# RHEL/CentOS
+sudo yum groupinstall "Development Tools"
+```
+
+**Windows**: Install windows-build-tools:
+```bash
+npm install --global windows-build-tools
+```
+
 ## Quick Start
 
 ### Using npx (no installation required)
@@ -102,6 +123,11 @@ CLAUDE_CODE_MAX_MESSAGES=100     # Max messages to return
 # Agent Configuration
 GEMINI_API_KEY=...               # For Gemini agent
 OPENAI_API_KEY=...               # For Codex agent
+
+# Session Storage (HTTP mode)
+MCP_DATABASE_PATH=/path/to/sessions.db  # Custom database location
+# Default: ~/.local/share/mcp-coding-agents/sessions.db (Linux/macOS)
+#          %LOCALAPPDATA%\mcp-coding-agents\sessions.db (Windows)
 ```
 
 ## Development

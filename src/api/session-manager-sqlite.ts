@@ -6,7 +6,13 @@ import { SQLiteSessionStore, SessionStore, MessageRecord } from './sqlite-sessio
 interface SessionManagerConfig {
   sessionTimeout?: number; // Default: 1 hour
   maxSessions?: number; // Default: 100
-  dbPath?: string; // Database file path
+  dbPath?: string; // Database file path (optional - uses MCP_DATABASE_PATH or user data dir)
+}
+
+interface ResolvedSessionManagerConfig {
+  sessionTimeout: number;
+  maxSessions: number;
+  dbPath?: string;
 }
 
 /**
@@ -14,7 +20,7 @@ interface SessionManagerConfig {
  */
 export class ClaudeCodeSessionManager {
   private store: SessionStore;
-  private config: Required<SessionManagerConfig>;
+  private config: ResolvedSessionManagerConfig;
   private cleanupInterval: NodeJS.Timeout | null = null;
   private totalSessionsCreated: number = 0;
 
@@ -22,10 +28,10 @@ export class ClaudeCodeSessionManager {
     this.config = {
       sessionTimeout: config.sessionTimeout || 3600000, // 1 hour default
       maxSessions: config.maxSessions || 100,
-      dbPath: config.dbPath || './data/sessions.db'
+      dbPath: config.dbPath
     };
 
-    // Initialize SQLite store
+    // Initialize SQLite store (will use env var or default path if not provided)
     this.store = new SQLiteSessionStore(this.config.dbPath);
     
     // Load total sessions count from database

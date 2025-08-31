@@ -3,6 +3,7 @@ import { Session } from './session-manager';
 import { log, error as logError } from '../utils/logger';
 import * as path from 'path';
 import * as fs from 'fs';
+import envPaths from 'env-paths';
 
 export interface MessageRecord {
   id: number;
@@ -36,20 +37,35 @@ export interface SessionStore {
 export class SQLiteSessionStore implements SessionStore {
   private db: Database.Database;
   
-  constructor(dbPath: string = './data/sessions.db') {
+  constructor(dbPath?: string) {
+    // Use provided path, env variable, or default to user data directory
+    const finalPath = dbPath || process.env.MCP_DATABASE_PATH || this.getDefaultDbPath();
+    
     // Ensure directory exists
-    const dir = path.dirname(dbPath);
+    const dir = path.dirname(finalPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
     
-    this.db = new Database(dbPath);
-    this.db.pragma('journal_mode = WAL');
-    this.db.pragma('synchronous = NORMAL');
-    
-    this.initializeSchema();
-    this.runMigrations();
-    log('[sqlite-store] Database initialized at:', dbPath);
+    try {
+      this.db = new Database(finalPath);
+      this.db.pragma('journal_mode = WAL');
+      this.db.pragma('synchronous = NORMAL');
+      
+      this.initializeSchema();
+      this.runMigrations();
+      log('[sqlite-store] Database initialized at:', finalPath);
+    } catch (error) {
+      logError('[sqlite-store] Failed to initialize database:', error);
+      logError('[sqlite-store] Path:', finalPath);
+      logError('[sqlite-store] If you see permission errors, try setting MCP_DATABASE_PATH environment variable');
+      throw new Error(`Database initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+  
+  private getDefaultDbPath(): string {
+    const paths = envPaths('mcp-coding-agents', { suffix: '' });
+    return path.join(paths.data, 'sessions.db');
   }
   
   private initializeSchema(): void {

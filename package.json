@@ -58,6 +58,7 @@
     "better-sqlite3": "^12.2.0",
     "commander": "^14.0.0",
     "dotenv": "^17.2.0",
+    "env-paths": "^3.0.0",
     "express": "^5.1.0",
     "express-openapi-validator": "^5.5.8",
     "js-yaml": "^4.1.0",
