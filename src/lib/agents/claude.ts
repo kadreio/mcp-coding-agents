@@ -1,4 +1,6 @@
 import { randomUUID } from 'crypto';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { claudeCodeConfig } from '../../config/claude-code';
 import { log, error as logError } from '../../utils/logger';
 import type { 
@@ -12,6 +14,31 @@ import type {
 // Dynamic import for ES module compatibility
 let claudeQuery: typeof import('@anthropic-ai/claude-code').query;
 
+// Promisify exec for easier use
+const execAsync = promisify(exec);
+
+// Cache for claude executable path
+let cachedClaudePath: string | null = null;
+
+/**
+ * Detect Claude executable path using 'which' command
+ */
+async function detectClaudeExecutable(): Promise<string | null> {
+  if (cachedClaudePath) {
+    return cachedClaudePath;
+  }
+
+  try {
+    const { stdout } = await execAsync('which claude');
+    cachedClaudePath = stdout.trim();
+    log('claude-executable', `Detected Claude executable at: ${cachedClaudePath}`);
+    return cachedClaudePath;
+  } catch (error) {
+    log('claude-executable', 'Claude executable not found in PATH');
+    return null;
+  }
+}
+
 export interface ClaudeCodeQueryOptions {
   cwd?: string;
   maxTurns?: number;
@@ -22,6 +49,7 @@ export interface ClaudeCodeQueryOptions {
   includeSystemMessages?: boolean;
   sessionId?: string;
   timeout?: number;
+  pathToClaudeCodeExecutable?: string;
 }
 
 export interface ClaudeCodeQueryArgs {
@@ -151,6 +179,14 @@ export async function handleClaudeCodeQuery(
   // Merge request options with configured defaults
   const mergedOptions = claudeCodeConfig.mergeOptions(requestOptions);
   
+  // Determine pathToClaudeCodeExecutable
+  let pathToClaudeCodeExecutable = mergedOptions.pathToClaudeCodeExecutable;
+  
+  // If not provided, try to detect it
+  if (!pathToClaudeCodeExecutable) {
+    pathToClaudeCodeExecutable = await detectClaudeExecutable() || undefined;
+  }
+  
   // Set up query options
   const queryOptions: Partial<Options> = {
     cwd: mergedOptions.cwd,
@@ -162,7 +198,9 @@ export async function handleClaudeCodeQuery(
     // Use provided AbortController or create a new one
     abortController: (requestOptions as any).abortController || new AbortController(),
     // Use the current Node.js executable directly to avoid PATH issues
-    executable: process.execPath as any // Use the full path to the current Node.js executable
+    executable: process.execPath as any, // Use the full path to the current Node.js executable
+    // Include pathToClaudeCodeExecutable if available
+    ...(pathToClaudeCodeExecutable && { pathToClaudeCodeExecutable })
   };
   
   // Add resume option if sessionId is provided

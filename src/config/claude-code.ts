@@ -26,6 +26,7 @@ export const claudeCodeConfig = {
       ? parseInt(process.env.CLAUDE_CODE_MAX_MESSAGES, 10) 
       : 100,
     includeSystemMessages: process.env.CLAUDE_CODE_INCLUDE_SYSTEM_MESSAGES !== 'false', // Default: true
+    pathToClaudeCodeExecutable: process.env.CLAUDE_CODE_EXECUTABLE_PATH || undefined,
   },
   
   // Helper to merge request options with defaults
@@ -40,6 +41,7 @@ export const claudeCodeConfig = {
       includeSystemMessages: requestOptions.includeSystemMessages !== undefined 
         ? requestOptions.includeSystemMessages 
         : this.defaults.includeSystemMessages,
+      pathToClaudeCodeExecutable: requestOptions.pathToClaudeCodeExecutable || this.defaults.pathToClaudeCodeExecutable,
     };
   }
 };

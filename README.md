@@ -119,6 +119,7 @@ CLAUDE_CODE_ENABLE=true          # Enable/disable Claude Code tool
 CLAUDE_CODE_DEFAULT_CWD=/path    # Default working directory
 CLAUDE_CODE_DEFAULT_MODEL=...    # Default Claude model
 CLAUDE_CODE_MAX_MESSAGES=100     # Max messages to return
+CLAUDE_CODE_EXECUTABLE_PATH=/path/to/claude  # Path to Claude executable (auto-detected if not set)
 
 # Agent Configuration
 GEMINI_API_KEY=...               # For Gemini agent

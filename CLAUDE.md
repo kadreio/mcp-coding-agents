@@ -122,6 +122,7 @@ Optional:
 - `CLAUDE_CODE_DEFAULT_CWD` - Default working directory
 - `CLAUDE_CODE_DEFAULT_MODEL` - Default Claude model
 - `CLAUDE_CODE_DEFAULT_PERMISSION_MODE` - Permission mode (default: bypassPermissions)
+- `CLAUDE_CODE_EXECUTABLE_PATH` - Path to Claude executable (auto-detected via 'which claude' if not set)
 - `GEMINI_API_KEY` - For Gemini agent
 - `OPENAI_API_KEY` - For Codex agent
 
