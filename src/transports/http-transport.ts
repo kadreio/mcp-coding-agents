@@ -102,7 +102,12 @@ export class HttpTransport extends MCPTransport {
     }
 
     // Setup Swagger documentation if enabled
-    setupSwaggerMiddleware(this.app, this.config.swagger);
+    setupSwaggerMiddleware(this.app, {
+      ...this.config.swagger,
+      port: this.port,
+      host: this.host,
+      useHttps: this.useHttps
+    });
 
     // MCP endpoint handler
     this.app.post('/mcp', async (req: Request, res: Response) => {

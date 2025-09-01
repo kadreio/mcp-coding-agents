@@ -12,13 +12,19 @@ export interface SwaggerMiddlewareConfig {
   enableValidation?: boolean;
   validateRequests?: boolean;
   validateResponses?: boolean;
+  port?: number;
+  host?: string;
+  useHttps?: boolean;
 }
 
 export function setupSwaggerMiddleware(app: Application, config: SwaggerMiddlewareConfig = {}): void {
   const {
     specPath = path.join(__dirname, '../../docs/openapi/claude-code-api.yaml'),
     basePath = '/api-docs',
-    enabled = true
+    enabled = true,
+    port = 3050,
+    host = 'localhost',
+    useHttps = false
   } = config;
 
   if (!enabled) {
@@ -29,6 +35,17 @@ export function setupSwaggerMiddleware(app: Application, config: SwaggerMiddlewa
     // Load OpenAPI spec
     const yamlContent = fs.readFileSync(specPath, 'utf8');
     const openapiSpec = yaml.load(yamlContent) as any;
+
+    // Dynamically update server URLs based on actual configuration
+    const protocol = useHttps ? 'https' : 'http';
+    const displayHost = host === '0.0.0.0' ? 'localhost' : host;
+    
+    openapiSpec.servers = [
+      {
+        url: `${protocol}://${displayHost}:${port}/api/v1`,
+        description: 'Current server instance'
+      }
+    ];
 
     // Serve Swagger UI
     app.use(basePath, swaggerUi.serve);
