@@ -117,7 +117,7 @@ Required:
 - `ANTHROPIC_API_KEY` - For Claude Code functionality
 
 Optional:
-- `MCP_PORT` (default: 3050) - HTTP server port
+- `PORT` (default: 3050) - HTTP server port
 - `CLAUDE_CODE_ENABLE` (default: true) - Enable/disable Claude Code tool
 - `CLAUDE_CODE_DEFAULT_CWD` - Default working directory
 - `CLAUDE_CODE_DEFAULT_MODEL` - Default Claude model

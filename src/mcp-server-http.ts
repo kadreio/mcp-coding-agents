@@ -22,7 +22,7 @@ import * as promptsData from './lib/prompts.json';
 dotenv.config();
 
 const app = express();
-const MCP_PORT = parseInt(process.env.MCP_PORT || '3050', 10);
+const PORT = parseInt(process.env.PORT || '3050', 10);
 
 // Map to store transports by session ID
 const transports: Map<string, StreamableHTTPServerTransport> = new Map();
@@ -364,7 +364,7 @@ function createMCPServer(): Server {
                 name: 'example-mcp-server',
                 version: '1.0.0',
                 environment: process.env.NODE_ENV || 'development',
-                port: process.env.MCP_PORT || '3050',
+                port: process.env.PORT || '3050',
               }, null, 2),
             },
           ],
@@ -580,8 +580,8 @@ app.get('/mcp', async (req: Request, res: Response) => {
 });
 
 // Start the HTTP server
-app.listen(MCP_PORT, () => {
-  console.log(`🚀 MCP Streamable HTTP Server running on port ${MCP_PORT}`);
-  console.log(`📡 MCP endpoint: http://localhost:${MCP_PORT}/mcp`);
-  console.log(`❤️  Health check: http://localhost:${MCP_PORT}/health`);
+app.listen(PORT, () => {
+  console.log(`🚀 MCP Streamable HTTP Server running on port ${PORT}`);
+  console.log(`📡 MCP endpoint: http://localhost:${PORT}/mcp`);
+  console.log(`❤️  Health check: http://localhost:${PORT}/health`);
 });

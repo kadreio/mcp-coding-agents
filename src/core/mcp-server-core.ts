@@ -74,7 +74,6 @@ export class CoreMCPServer {
           tools: {},
           resources: {},
           prompts: {},
-          logging: {},
         },
       }
     );
@@ -429,7 +428,7 @@ export class CoreMCPServer {
                 name: this.config.name,
                 version: this.config.version,
                 environment: process.env.NODE_ENV || 'development',
-                port: process.env.MCP_PORT || '3050',
+                port: process.env.PORT || '3050',
               }, null, 2),
             },
           ],

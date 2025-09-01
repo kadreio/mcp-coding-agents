@@ -111,7 +111,7 @@ mcp-claude-code http --port 3050
 
 ```bash
 # Core Configuration
-MCP_PORT=3050                    # HTTP server port (default: 3050)
+PORT=3050                        # HTTP server port (default: 3050)
 
 # Claude Code Configuration
 ANTHROPIC_API_KEY=sk-ant-...     # Required for Claude Code

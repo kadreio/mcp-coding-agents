@@ -19,7 +19,7 @@ program
   .version('1.0.0')
   .argument('[mode]', 'Transport mode (stdio or http)', 'http')
   .option('-t, --transport <type>', 'Transport type (stdio or http)')
-  .option('-p, --port <port>', 'Port for HTTP transport', '3050')
+  .option('-p, --port <port>', 'Port for HTTP transport', process.env.PORT || '3050')
   .option('--host <host>', 'Host for HTTP transport', '0.0.0.0')
   .option('--no-cors', 'Disable CORS for HTTP transport')
   .option('--https', 'Enable HTTPS')

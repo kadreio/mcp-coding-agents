@@ -31,7 +31,7 @@ echo "✓ STDIO command runs without error"
 
 # Test 4: HTTP server
 echo -e "\n${GREEN}Test 4: HTTP server mode${NC}"
-MCP_PORT=3052 timeout 2s node dist/cli.js http > /tmp/cli-test-http.log 2>&1 &
+PORT=3052 timeout 2s node dist/cli.js http > /tmp/cli-test-http.log 2>&1 &
 HTTP_PID=$!
 sleep 1
 if grep -q "MCP Server (HTTP) listening on port 3052" /tmp/cli-test-http.log; then

@@ -42,7 +42,7 @@ export class HttpTransport extends MCPTransport {
 
   constructor(coreServer: CoreMCPServer, config: HttpTransportConfig = {}) {
     super(coreServer, config);
-    this.port = config.port || parseInt(process.env.MCP_PORT || '3050', 10);
+    this.port = config.port || parseInt(process.env.PORT || '3050', 10);
     this.host = config.host || '0.0.0.0';
     this.useHttps = config.https || false;
     this.app = express();

@@ -3,7 +3,7 @@
 # MCP Server Test Script using curl
 # Make sure the server is running first: npm run mcp:http:dev
 
-PORT=${MCP_PORT:-3050}
+PORT=${PORT:-3050}
 BASE_URL="http://localhost:$PORT"
 
 echo "Testing MCP Streamable HTTP Server at $BASE_URL"
