@@ -27,7 +27,7 @@ const scriptPath = path.join(__dirname, scripts[command]);
 const childArgs = args.slice(1);
 
 const child = spawn('node', [scriptPath, ...childArgs], {
-  stdio: 'inherit',
+  stdio: ['inherit', 'inherit', 'inherit'],
   env: process.env
 });
 

@@ -49,7 +49,9 @@ async function generateWithOpenSSL(): Promise<SelfSignedCertificate> {
       '/C=US/ST=State/L=City/O=MCP-Coding-Agents/CN=localhost',
       '-addext',
       'subjectAltName=DNS:localhost,IP:127.0.0.1'
-    ]);
+    ], {
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
 
     let stderr = '';
     openssl.stderr.on('data', (data) => {

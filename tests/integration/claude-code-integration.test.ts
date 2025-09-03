@@ -40,6 +40,14 @@ describe('Claude Code Integration Tests', () => {
         output += data.toString();
       });
 
+      // Handle unexpected process exit
+      serverProcess.on('exit', (code, signal) => {
+        if (!serverStarted) {
+          console.error(`Server process exited unexpectedly with code ${code} and signal ${signal}`);
+          console.error(`Server output: ${output}`);
+        }
+      });
+
       // Wait for server to start
       await new Promise<void>((resolve, reject) => {
         const checkInterval = setInterval(() => {

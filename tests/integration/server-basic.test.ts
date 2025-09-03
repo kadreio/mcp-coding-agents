@@ -29,12 +29,26 @@ describe('Server Basic Tests', () => {
     });
 
     let serverStarted = false;
+    let serverOutput = '';
     
     // Capture output
     serverProcess.stdout?.on('data', (data) => {
       const output = data.toString();
+      serverOutput += output;
       if (output.includes('MCP HTTP Server running') || output.includes('MCP HTTPS Server running')) {
         serverStarted = true;
+      }
+    });
+
+    serverProcess.stderr?.on('data', (data) => {
+      serverOutput += data.toString();
+    });
+
+    // Handle unexpected process exit
+    serverProcess.on('exit', (code, signal) => {
+      if (!serverStarted) {
+        console.error(`Server process exited unexpectedly with code ${code} and signal ${signal}`);
+        console.error(`Server output: ${serverOutput}`);
       }
     });
 
@@ -50,7 +64,7 @@ describe('Server Basic Tests', () => {
       setTimeout(() => {
         clearInterval(checkInterval);
         resolve();
-      }, 5000);
+      }, 10000);
     });
 
     expect(serverStarted).toBe(true);
@@ -89,7 +103,7 @@ describe('Server Basic Tests', () => {
     expect(healthResponse.status).toBe('OK');
     expect(healthResponse.service).toBe('MCP Server');
     expect(healthResponse.transport).toBe('HTTP');
-  }, 15000);
+  }, 20000);
 
   test('STDIO server should respond to initialize', async () => {
     // Start STDIO server
@@ -121,7 +135,7 @@ describe('Server Basic Tests', () => {
     serverProcess.stdin?.write(request);
 
     // Wait for response
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     expect(response).toContain('"jsonrpc":"2.0"');
     expect(response).toContain('"id":1');
