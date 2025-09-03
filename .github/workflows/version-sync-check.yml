@@ -1,0 +1,44 @@
+name: Version Sync Check
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  check-version-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all tags
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Check version sync
+        run: |
+          # Get package.json version
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          
+          # Get latest git tag (removing 'v' prefix if present)
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [[ "$LATEST_TAG" == v* ]]; then
+              TAG_VERSION="${LATEST_TAG:1}"
+          else
+              TAG_VERSION="$LATEST_TAG"
+          fi
+          
+          echo "Package.json version: $PACKAGE_VERSION"
+          echo "Latest git tag: $LATEST_TAG (version: $TAG_VERSION)"
+          
+          # Check if they match
+          if [ "$PACKAGE_VERSION" != "$TAG_VERSION" ]; then
+              echo "::error::Version mismatch! Package.json: $PACKAGE_VERSION, Tag: $TAG_VERSION"
+              exit 1
+          fi
+          
+          echo "✅ Version and tag are in sync!"

@@ -40,6 +40,13 @@ fi
 print_info "Pulling latest changes..."
 git pull origin $CURRENT_BRANCH
 
+# Check version sync before proceeding
+print_info "Checking version sync..."
+if ! ./scripts/check-version-sync.sh; then
+    print_error "Version sync check failed. Please fix the version mismatch before releasing."
+    exit 1
+fi
+
 # Run tests
 print_info "Running tests..."
 npm test

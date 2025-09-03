@@ -32,7 +32,8 @@
     "release:patch": "./scripts/release.sh patch",
     "release:minor": "./scripts/release.sh minor",
     "release:major": "./scripts/release.sh major",
-    "release:beta": "./scripts/release.sh prerelease beta"
+    "release:beta": "./scripts/release.sh prerelease beta",
+    "check:version": "./scripts/check-version-sync.sh"
   },
   "author": "kardio",
   "license": "MIT",
