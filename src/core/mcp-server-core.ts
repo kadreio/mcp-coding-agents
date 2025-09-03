@@ -6,12 +6,15 @@ import {
   ListResourcesRequestSchema,
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
+  SetLevelRequestSchema,
   CallToolRequest,
   ListToolsRequest,
   ListResourcesRequest,
   ReadResourceRequest,
   ListPromptsRequest,
   GetPromptRequest,
+  SetLevelRequest,
+  LoggingLevel,
 } from '@modelcontextprotocol/sdk/types.js';
 import { execSync } from 'child_process';
 import { getClaudeCodeToolDefinition, handleClaudeCodeQuery, isClaudeCodeQueryArgs } from '../lib/agents/claude';
@@ -42,6 +45,7 @@ export class CoreMCPServer {
   private server!: Server; // Use definite assignment assertion since we initialize in constructor
   private config: ResolvedServerConfig;
   private isStdio: boolean;
+  private currentLogLevel: LoggingLevel = 'info';
 
   constructor(config: CoreMCPServerConfig = {}) {
     this.config = {
@@ -56,11 +60,6 @@ export class CoreMCPServer {
     this.initializeServer();
   }
 
-  private log(...args: any[]): void {
-    if (!this.isStdio) {
-      console.log(...args);
-    }
-  }
 
   private initializeServer(): void {
     // Initialize the MCP SDK server
@@ -74,12 +73,23 @@ export class CoreMCPServer {
           tools: {},
           resources: {},
           prompts: {},
+          logging: {},
         },
       }
     );
 
     // Register all handlers
     this.registerHandlers();
+    
+    // Log server initialization (no sendNotification available during init)
+    if (!this.isStdio) {
+      console.log('[info] [core-mcp-server]', { 
+        message: 'MCP server initialized',
+        name: this.config.name,
+        version: this.config.version,
+        capabilities: ['tools', 'resources', 'prompts', 'logging']
+      });
+    }
   }
 
   /**
@@ -105,6 +115,9 @@ export class CoreMCPServer {
     // Prompts
     this.server.setRequestHandler(ListPromptsRequestSchema, this.handleListPrompts.bind(this));
     this.server.setRequestHandler(GetPromptRequestSchema, this.handleGetPrompt.bind(this));
+
+    // Logging
+    this.server.setRequestHandler(SetLevelRequestSchema, this.handleSetLoggingLevel.bind(this));
   }
 
   /**
@@ -225,11 +238,12 @@ export class CoreMCPServer {
           throw new Error('Command is required');
         }
 
-        this.log(`[execute_command] Request received:`, {
+        this.sendLog('debug', 'execute_command', {
+          message: 'Request received',
           command,
           cwd: cwd || 'current directory',
           timeout
-        });
+        }, extra?.sendNotification);
 
         try {
           const startTime = Date.now();
@@ -248,7 +262,8 @@ export class CoreMCPServer {
 
           const executionTime = Date.now() - startTime;
 
-          this.log(`[execute_command] Command executed successfully in ${executionTime}ms:`, {
+          this.sendLog('info', 'execute_command', {
+            message: `Command executed successfully in ${executionTime}ms`,
             command,
             outputLength: output.length,
             outputPreview: output.slice(0, 200) + (output.length > 200 ? '...' : '')
@@ -266,7 +281,8 @@ export class CoreMCPServer {
           const errorMessage = error.stderr || error.message || 'Command execution failed';
           const exitCode = error.status !== undefined ? error.status : 'unknown';
 
-          this.log(`[execute_command] Command failed:`, {
+          this.sendLog('error', 'execute_command', {
+            message: 'Command failed',
             command,
             exitCode,
             errorMessage
@@ -287,7 +303,15 @@ export class CoreMCPServer {
         if (!isClaudeCodeQueryArgs(args)) {
           throw new Error('Invalid arguments for claude_code_query: prompt is required');
         }
-        return await handleClaudeCodeQuery(args, extra?.sendNotification, extra?.signal);
+        this.sendLog('info', 'claude_code_query', { message: 'Processing Claude Code query', prompt: args.prompt });
+        try {
+          const result = await handleClaudeCodeQuery(args, extra?.sendNotification, extra?.signal);
+          this.sendLog('info', 'claude_code_query', { message: 'Claude Code query completed successfully' });
+          return result;
+        } catch (error: any) {
+          this.sendLog('error', 'claude_code_query', { message: 'Claude Code query failed', error: error.message });
+          throw error;
+        }
       }
 
       case 'gemini_query': {
@@ -311,7 +335,7 @@ export class CoreMCPServer {
 
         // Check if we can stream (requires sendNotification)
         if (sendNotification) {
-          this.log('Streaming timestamps via notifications');
+          this.sendLog('debug', 'demo_streaming_tool', { message: 'Streaming timestamps via notifications' }, sendNotification);
 
           // Send initial notification
           await sendNotification({
@@ -339,7 +363,7 @@ export class CoreMCPServer {
               }
             });
 
-            this.log(`Streamed timestamp ${i}: ${timestamp}`);
+            this.sendLog('debug', 'demo_streaming_tool', { message: `Streamed timestamp ${i}`, timestamp }, sendNotification);
 
             if (i < 10) {
               await sleep(delay);
@@ -356,7 +380,7 @@ export class CoreMCPServer {
             ],
           };
         } else {
-          this.log('No notification support - returning all timestamps at once');
+          this.sendLog('debug', 'demo_streaming_tool', { message: 'No notification support - returning all timestamps at once' }, extra?.sendNotification);
 
           // Fallback: Generate all timestamps with delays
           const timestamps = [];
@@ -500,5 +524,65 @@ export class CoreMCPServer {
         },
       ],
     };
+  }
+
+  /**
+   * Handle logging/setLevel request
+   */
+  private async handleSetLoggingLevel(request: SetLevelRequest): Promise<{}> {
+    const { level } = request.params;
+    
+    // Validate the log level
+    const validLevels: LoggingLevel[] = ['debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency'];
+    if (!validLevels.includes(level)) {
+      throw new Error(`Invalid log level: ${level}`);
+    }
+    
+    this.currentLogLevel = level;
+    this.sendLog('info', 'core-mcp-server', { message: `Log level set to ${level}` }, undefined);
+    
+    return {};
+  }
+
+  /**
+   * Send a log notification if the level is appropriate
+   * Note: This requires a context with sendNotification support
+   */
+  public sendLog(level: LoggingLevel, logger: string, data: any, sendNotification?: (notification: any) => Promise<void>): void {
+    const levelPriority: Record<LoggingLevel, number> = {
+      debug: 0,
+      info: 1,
+      notice: 2,
+      warning: 3,
+      error: 4,
+      critical: 5,
+      alert: 6,
+      emergency: 7,
+    };
+
+    // Only send if the message level is >= current log level
+    if (levelPriority[level] >= levelPriority[this.currentLogLevel]) {
+      // Use console.log if no notification support
+      if (!sendNotification) {
+        if (!this.isStdio) {
+          console.log(`[${level}] [${logger}]`, data);
+        }
+        return;
+      }
+      
+      // Send via MCP notification
+      sendNotification({
+        method: 'notifications/message',
+        params: {
+          level,
+          logger,
+          data,
+        },
+      }).catch(err => {
+        if (!this.isStdio) {
+          console.error('Failed to send log notification:', err);
+        }
+      });
+    }
   }
 }
