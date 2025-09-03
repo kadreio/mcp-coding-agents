@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import { CoreMCPServer } from './core/mcp-server-core';
 import { TransportFactory, TransportType } from './core/transport-factory';
 import { program } from 'commander';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 // Determine if we're in STDIO mode early to suppress logs
 const isStdio = process.argv.includes('stdio') || 
@@ -12,11 +14,24 @@ const isStdio = process.argv.includes('stdio') ||
 // Load environment variables
 dotenv.config({ quiet: isStdio });
 
+// Read version from package.json
+let packageVersion = '1.0.0';
+try {
+  const packageJsonPath = join(__dirname, '..', 'package.json');
+  const packageData = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+  packageVersion = packageData.version || '1.0.0';
+} catch (error) {
+  // Fallback to default if package.json can't be read
+  if (!isStdio) {
+    console.warn('Could not read package.json, using default version');
+  }
+}
+
 // Define CLI interface
 program
   .name('@kadreio/mcp-coding-agents')
   .description('MCP Server with multiple AI coding agents for enhanced development workflows')
-  .version('1.0.0')
+  .version(packageVersion)
   .argument('[mode]', 'Transport mode (stdio or http)', 'http')
   .option('-t, --transport <type>', 'Transport type (stdio or http)')
   .option('-p, --port <port>', 'Port for HTTP transport', process.env.PORT || '3050')
@@ -61,7 +76,7 @@ async function main() {
     // Create core MCP server
     const coreServer = new CoreMCPServer({
       name: '@kadreio/mcp-coding-agents',
-      version: '1.0.0',
+      version: packageVersion,
     });
 
     // Create transport based on type

@@ -48,9 +48,21 @@ export class CoreMCPServer {
   private currentLogLevel: LoggingLevel = 'info';
 
   constructor(config: CoreMCPServerConfig = {}) {
+    // Try to get version from package.json if not provided
+    let defaultVersion = '1.0.0';
+    if (!config.version) {
+      try {
+        const packageJsonPath = require.resolve('../../package.json');
+        const packageData = require(packageJsonPath);
+        defaultVersion = packageData.version || '1.0.0';
+      } catch {
+        // Fallback to hardcoded version if package.json can't be read
+      }
+    }
+    
     this.config = {
       name: config.name ?? '@kadreio/mcp-coding-agents',
-      version: config.version ?? '1.0.0',
+      version: config.version ?? defaultVersion,
     };
     
     // Check if we're in STDIO mode
