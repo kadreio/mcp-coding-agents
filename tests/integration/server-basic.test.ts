@@ -9,7 +9,7 @@ describe('Server Basic Tests', () => {
   afterEach(async () => {
     if (serverProcess && !serverProcess.killed) {
       serverProcess.kill('SIGTERM');
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
       if (!serverProcess.killed) {
         serverProcess.kill('SIGKILL');
       }
@@ -33,7 +33,7 @@ describe('Server Basic Tests', () => {
     // Capture output
     serverProcess.stdout?.on('data', (data) => {
       const output = data.toString();
-      if (output.includes('MCP HTTP Server running')) {
+      if (output.includes('MCP HTTP Server running') || output.includes('MCP HTTPS Server running')) {
         serverStarted = true;
       }
     });
@@ -56,7 +56,7 @@ describe('Server Basic Tests', () => {
     expect(serverStarted).toBe(true);
 
     // Wait for server to be fully ready
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Test health endpoint
     const healthResponse = await new Promise<any>((resolve, reject) => {

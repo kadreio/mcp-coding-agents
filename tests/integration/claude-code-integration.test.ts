@@ -20,7 +20,7 @@ describe('Claude Code Integration Tests', () => {
       // Start the MCP server
       serverProcess = spawn('node', [CLI_PATH, 'http', '--port', String(serverPort)], {
         env: { ...process.env },
-        stdio: 'pipe'
+        stdio: ['pipe', 'pipe', 'pipe']
       });
 
       let serverStarted = false;
@@ -30,7 +30,8 @@ describe('Claude Code Integration Tests', () => {
       serverProcess.stdout?.on('data', (data) => {
         const text = data.toString();
         output += text;
-        if (text.includes('MCP HTTP Server running') || output.includes('MCP HTTP Server running')) {
+        if (text.includes('MCP HTTP Server running') || text.includes('MCP HTTPS Server running') || 
+            output.includes('MCP HTTP Server running') || output.includes('MCP HTTPS Server running')) {
           serverStarted = true;
         }
       });
@@ -59,7 +60,7 @@ describe('Claude Code Integration Tests', () => {
       });
 
       // Give server a moment to stabilize
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Check if process is still running
       if (serverProcess.killed) {
@@ -107,16 +108,14 @@ describe('Claude Code Integration Tests', () => {
       expect(toolNames).toContain('claude_code_query');
       expect(toolNames).toContain('gemini_query');
       expect(toolNames).toContain('codex_query');
-      expect(toolNames).toContain('calculate_bmi');
-      expect(toolNames).toContain('get_timestamp');
+      expect(toolNames).toContain('execute_command');
     });
 
-    test('should execute calculate_bmi tool', async () => {
+    test('should execute execute_command tool', async () => {
       const result = await client.callTool({
-        name: 'calculate_bmi',
+        name: 'execute_command',
         arguments: {
-          weight: 70,
-          height: 1.75
+          command: 'echo "Test output"'
         }
       });
 
@@ -125,35 +124,16 @@ describe('Claude Code Integration Tests', () => {
       const content = result.content as any[];
       expect(content[0]).toBeDefined();
       expect(content[0].type).toBe('text');
-      expect(content[0].text).toContain('BMI:');
-      expect(content[0].text).toContain('22.86');
+      expect(content[0].text.trim()).toBe('Test output');
     });
 
     test('should handle tool with missing arguments', async () => {
       await expect(client.callTool({
-        name: 'calculate_bmi',
+        name: 'execute_command',
         arguments: {
-          weight: 70
-          // missing height
+          // missing command
         }
       })).rejects.toThrow();
-    });
-
-    test('should execute get_timestamp tool', async () => {
-      const result = await client.callTool({
-        name: 'get_timestamp',
-        arguments: {}
-      });
-
-      expect(result).toBeDefined();
-      expect(result.content).toBeDefined();
-      const content = result.content as any[];
-      expect(content[0]).toBeDefined();
-      expect(content[0].type).toBe('text');
-      
-      // Verify it's a valid ISO timestamp
-      const timestamp = content[0].text;
-      expect(new Date(timestamp).toISOString()).toBe(timestamp);
     });
 
     test('should list available prompts', async () => {

@@ -126,26 +126,6 @@ export class CoreMCPServer {
   private async handleListTools(_request: ListToolsRequest): Promise<{ tools: any[] }> {
     const tools: any[] = [
       {
-        name: 'calculate_bmi',
-        description: 'Calculate Body Mass Index (BMI)',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            weight: { type: 'number', description: 'Weight in kilograms' },
-            height: { type: 'number', description: 'Height in meters' },
-          },
-          required: ['weight', 'height'],
-        },
-      },
-      {
-        name: 'get_timestamp',
-        description: 'Get the current timestamp',
-        inputSchema: {
-          type: 'object',
-          properties: {},
-        },
-      },
-      {
         name: 'execute_command',
         description: 'Execute a shell command synchronously and return its output',
         inputSchema: {
@@ -156,16 +136,6 @@ export class CoreMCPServer {
             timeout: { type: 'number', description: 'Command timeout in milliseconds (optional, default: 0 which means no timeout)' },
           },
           required: ['command'],
-        },
-      },
-      {
-        name: 'stream_sse_timestamps',
-        description: 'Generate 10 timestamps streaming',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            delay: { type: 'number', description: 'Delay between timestamps in milliseconds (default: 1000)' },
-          },
         },
       },
     ];
@@ -194,41 +164,6 @@ export class CoreMCPServer {
     const { name, arguments: args } = request.params;
 
     switch (name) {
-      case 'calculate_bmi': {
-        const weight = args?.weight as number;
-        const height = args?.height as number;
-
-        if (!weight || !height) {
-          throw new Error('Weight and height are required');
-        }
-
-        const bmi = weight / (height * height);
-        const category =
-          bmi < 18.5 ? 'Underweight' :
-          bmi < 25 ? 'Normal weight' :
-          bmi < 30 ? 'Overweight' : 'Obese';
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `BMI: ${bmi.toFixed(2)} (${category})`,
-            },
-          ],
-        };
-      }
-
-      case 'get_timestamp': {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: new Date().toISOString(),
-            },
-          ],
-        };
-      }
-
       case 'execute_command': {
         const command = args?.command as string;
         const cwd = args?.cwd as string | undefined;
@@ -326,86 +261,6 @@ export class CoreMCPServer {
           throw new Error('Invalid arguments for codex_query: prompt is required');
         }
         return await handleCodexQuery(args, extra?.sendNotification, extra?.signal);
-      }
-
-      case 'stream_sse_timestamps': {
-        const delay = (args?.delay as number) || 1000;
-        const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-        const sendNotification = extra?.sendNotification;
-
-        // Check if we can stream (requires sendNotification)
-        if (sendNotification) {
-          this.sendLog('debug', 'demo_streaming_tool', { message: 'Streaming timestamps via notifications' }, sendNotification);
-
-          // Send initial notification
-          await sendNotification({
-            method: "notifications/message",
-            params: {
-              level: "info",
-              data: "Starting timestamp stream..."
-            }
-          });
-
-          // Stream timestamps via notifications
-          for (let i = 1; i <= 10; i++) {
-            const timestamp = new Date().toISOString();
-            const data = {
-              timestamp,
-              counter: i,
-              message: `Event ${i} of 10`
-            };
-
-            await sendNotification({
-              method: "notifications/message",
-              params: {
-                level: "info",
-                data: JSON.stringify(data)
-              }
-            });
-
-            this.sendLog('debug', 'demo_streaming_tool', { message: `Streamed timestamp ${i}`, timestamp }, sendNotification);
-
-            if (i < 10) {
-              await sleep(delay);
-            }
-          }
-
-          // Return final summary
-          return {
-            content: [
-              {
-                type: 'text',
-                text: 'Successfully streamed 10 timestamps',
-              },
-            ],
-          };
-        } else {
-          this.sendLog('debug', 'demo_streaming_tool', { message: 'No notification support - returning all timestamps at once' }, extra?.sendNotification);
-
-          // Fallback: Generate all timestamps with delays
-          const timestamps = [];
-
-          for (let i = 1; i <= 10; i++) {
-            timestamps.push({
-              timestamp: new Date().toISOString(),
-              counter: i,
-              message: `Event ${i} of 10`
-            });
-
-            if (i < 10) {
-              await sleep(delay);
-            }
-          }
-
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Generated 10 timestamps with ${delay}ms delays:\n\n${JSON.stringify(timestamps, null, 2)}`,
-              },
-            ],
-          };
-        }
       }
 
       default:

@@ -47,8 +47,8 @@ fi
 
 echo -e "\nSession ID: $SESSION_ID"
 
-# 3. Calculate BMI using session
-echo -e "\n3. Calculate BMI (weight=70kg, height=1.75m):"
+# 3. Execute command using session
+echo -e "\n3. Execute command (echo test):"
 curl -s -X POST http://localhost:3050/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
@@ -57,30 +57,14 @@ curl -s -X POST http://localhost:3050/mcp \
     "jsonrpc": "2.0",
     "method": "tools/call",
     "params": {
-      "name": "calculate_bmi",
-      "arguments": {"weight": 70, "height": 1.75}
+      "name": "execute_command",
+      "arguments": {"command": "echo Session test output"}
     },
     "id": 2
   }' | jq .
 
-# 4. Get timestamp
-echo -e "\n4. Get current timestamp:"
-curl -s -X POST http://localhost:3050/mcp \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -H "Mcp-Session-Id: $SESSION_ID" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "tools/call",
-    "params": {
-      "name": "get_timestamp",
-      "arguments": {}
-    },
-    "id": 3
-  }' | jq .
-
-# 5. List available tools
-echo -e "\n5. List available tools:"
+# 4. List available tools
+echo -e "\n4. List available tools:"
 curl -s -X POST http://localhost:3050/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
@@ -89,11 +73,11 @@ curl -s -X POST http://localhost:3050/mcp \
     "jsonrpc": "2.0",
     "method": "tools/list",
     "params": {},
-    "id": 4
+    "id": 3
   }' | jq .
 
-# 6. Read server config resource
-echo -e "\n6. Read server configuration:"
+# 5. Read server config resource
+echo -e "\n5. Read server configuration:"
 curl -s -X POST http://localhost:3050/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
@@ -104,7 +88,7 @@ curl -s -X POST http://localhost:3050/mcp \
     "params": {
       "uri": "config://server"
     },
-    "id": 5
+    "id": 4
   }' | jq .
 
 # Clean up

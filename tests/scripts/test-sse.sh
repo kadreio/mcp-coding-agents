@@ -60,21 +60,17 @@ make_request() {
       }" | grep "^data: " | sed 's/^data: //' | jq .
 }
 
-# 3. Calculate BMI
-echo -e "\n3. Calculate BMI (weight=70kg, height=1.75m):"
-make_request "tools/call" '{"name": "calculate_bmi", "arguments": {"weight": 70, "height": 1.75}}' 2
+# 3. Execute command
+echo -e "\n3. Execute command (echo test):"
+make_request "tools/call" '{"name": "execute_command", "arguments": {"command": "echo SSE test output"}}' 2
 
-# 4. Get timestamp
-echo -e "\n4. Get current timestamp:"
-make_request "tools/call" '{"name": "get_timestamp", "arguments": {}}' 3
+# 4. List tools
+echo -e "\n4. List available tools:"
+make_request "tools/list" '{}' 3
 
-# 5. List tools
-echo -e "\n5. List available tools:"
-make_request "tools/list" '{}' 4
-
-# 6. Read server config
-echo -e "\n6. Read server configuration:"
-make_request "resources/read" '{"uri": "config://server"}' 5
+# 5. Read server config
+echo -e "\n5. Read server configuration:"
+make_request "resources/read" '{"uri": "config://server"}' 4
 
 # Clean up
 rm "$TEMP_FILE"

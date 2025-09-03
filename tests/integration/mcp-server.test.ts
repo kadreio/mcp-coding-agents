@@ -15,7 +15,7 @@ describe('MCP Streamable HTTP Server Integration Tests', () => {
     const serverPath = path.join(__dirname, '../../src/cli-unified.ts');
     serverProcess = spawn('ts-node', [serverPath, 'http', '--port', String(serverPort)], {
       env: { ...process.env },
-      stdio: 'pipe'
+      stdio: ['pipe', 'pipe', 'pipe']
     });
 
     // Wait for server to start
@@ -26,7 +26,7 @@ describe('MCP Streamable HTTP Server Integration Tests', () => {
 
       serverProcess.stdout?.on('data', (data) => {
         console.log('Server output:', data.toString());
-        if (data.toString().includes('MCP HTTP Server running')) {
+        if (data.toString().includes('MCP HTTP Server running') || data.toString().includes('MCP HTTPS Server running')) {
           clearTimeout(timeout);
           resolve();
         }
@@ -43,7 +43,7 @@ describe('MCP Streamable HTTP Server Integration Tests', () => {
     });
 
     // Give the server a moment to fully initialize
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Create client with streamable HTTP transport
     // Use 127.0.0.1 instead of localhost to avoid IPv6 issues in CI
@@ -85,22 +85,18 @@ describe('MCP Streamable HTTP Server Integration Tests', () => {
       
       console.log('Available tools:', response.tools.map(t => t.name));
       
-      expect(response.tools).toHaveLength(7);
-      expect(response.tools.map(t => t.name)).toContain('calculate_bmi');
-      expect(response.tools.map(t => t.name)).toContain('get_timestamp');
+      expect(response.tools).toHaveLength(4);
       expect(response.tools.map(t => t.name)).toContain('execute_command');
-      expect(response.tools.map(t => t.name)).toContain('stream_sse_timestamps');
       expect(response.tools.map(t => t.name)).toContain('claude_code_query');
       expect(response.tools.map(t => t.name)).toContain('gemini_query');
       expect(response.tools.map(t => t.name)).toContain('codex_query');
     });
 
-    test('should calculate BMI correctly', async () => {
+    test('should execute command successfully', async () => {
       const result = await client.callTool({
-        name: 'calculate_bmi',
+        name: 'execute_command',
         arguments: {
-          weight: 70,
-          height: 1.75
+          command: 'echo "Hello, World!"'
         }
       });
 
@@ -108,22 +104,7 @@ describe('MCP Streamable HTTP Server Integration Tests', () => {
       expect((result.content as any)[0].type).toBe('text');
       
       const textContent = (result.content as any)[0] as { type: 'text'; text: string };
-      expect(textContent.text).toContain('BMI: 22.86');
-      expect(textContent.text).toContain('Normal weight');
-    });
-
-    test('should get current timestamp', async () => {
-      const result = await client.callTool({
-        name: 'get_timestamp',
-        arguments: {}
-      });
-
-      expect(result.content).toHaveLength(1);
-      expect((result.content as any)[0].type).toBe('text');
-      
-      const textContent = (result.content as any)[0] as { type: 'text'; text: string };
-      // Check if it's a valid ISO timestamp
-      expect(new Date(textContent.text).toISOString()).toBe(textContent.text);
+      expect(textContent.text.trim()).toBe('Hello, World!');
     });
 
     test('should handle invalid tool name', async () => {
@@ -135,8 +116,8 @@ describe('MCP Streamable HTTP Server Integration Tests', () => {
 
     test('should handle missing required parameters', async () => {
       await expect(client.callTool({
-        name: 'calculate_bmi',
-        arguments: { weight: 70 } // missing height
+        name: 'execute_command',
+        arguments: {} // missing command
       })).rejects.toThrow();
     });
   });
