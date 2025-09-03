@@ -12,7 +12,9 @@ describe('Unified CLI Tests', () => {
 
   describe('Command line interface', () => {
     test('should show help message with --help flag', async () => {
-      const child = spawn('node', [CLI_PATH, '--help']);
+      const child = spawn('node', [CLI_PATH, '--help'], {
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
       
       let output = '';
       child.stdout?.on('data', (data) => {
@@ -34,7 +36,8 @@ describe('Unified CLI Tests', () => {
     test('should start HTTP server by default', async () => {
       const testPort = 3055; // Use unique port for this test
       const child = spawn('node', [CLI_PATH, '--port', String(testPort)], {
-        env: { ...process.env, NODE_ENV: 'test' }
+        env: { ...process.env, NODE_ENV: 'test' },
+        stdio: ['pipe', 'pipe', 'pipe']
       });
       
       let output = '';
@@ -79,7 +82,8 @@ describe('Unified CLI Tests', () => {
 
     test('should start STDIO server with explicit command', async () => {
       const child = spawn('node', [CLI_PATH, 'stdio'], {
-        env: { ...process.env, NODE_ENV: 'test' }
+        env: { ...process.env, NODE_ENV: 'test' },
+        stdio: ['pipe', 'pipe', 'pipe']
       });
       
       // STDIO server should respond to initialize
@@ -121,7 +125,8 @@ describe('Unified CLI Tests', () => {
     test('should start HTTP server when specified', async () => {
       const testPort = 3056;
       const child = spawn('node', [CLI_PATH, 'http', '--port', testPort.toString()], {
-        env: { ...process.env, NODE_ENV: 'test' }
+        env: { ...process.env, NODE_ENV: 'test' },
+        stdio: ['pipe', 'pipe', 'pipe']
       });
 
       let output = '';
@@ -161,7 +166,8 @@ describe('Unified CLI Tests', () => {
     test('should handle legacy server command', async () => {
       const testPort = 3057;
       const child = spawn('node', [CLI_PATH, 'server', '--port', String(testPort)], {
-        env: { ...process.env, NODE_ENV: 'test' }
+        env: { ...process.env, NODE_ENV: 'test' },
+        stdio: ['pipe', 'pipe', 'pipe']
       });
       
       let output = '';
@@ -208,7 +214,9 @@ describe('Unified CLI Tests', () => {
 
   describe('Transport modes', () => {
     test('should accept --transport flag for stdio', async () => {
-      const child = spawn('node', [CLI_PATH, '--transport', 'stdio']);
+      const child = spawn('node', [CLI_PATH, '--transport', 'stdio'], {
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
       
       // Test that STDIO server responds
       const testMessage = JSON.stringify({
@@ -245,7 +253,8 @@ describe('Unified CLI Tests', () => {
     test('should handle port configuration for HTTP', async () => {
       const testPort = 3058;
       const child = spawn('node', [CLI_PATH, 'http', '--port', testPort.toString()], {
-        env: { ...process.env, NODE_ENV: 'test' }
+        env: { ...process.env, NODE_ENV: 'test' },
+        stdio: ['pipe', 'pipe', 'pipe']
       });
 
       let output = '';

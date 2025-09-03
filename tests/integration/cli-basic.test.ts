@@ -10,7 +10,9 @@ describe('CLI Basic Tests', () => {
   
   (skipIfNotBuilt ? describe.skip : describe)('Built CLI tests', () => {
     test('should show help message', async () => {
-      const child = spawn('node', [CLI_PATH, '--help']);
+      const child = spawn('node', [CLI_PATH, '--help'], {
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
       
       let output = '';
       child.stdout?.on('data', (data) => {
@@ -28,7 +30,9 @@ describe('CLI Basic Tests', () => {
     });
 
     test('should accept stdio mode', async () => {
-      const child = spawn('node', [CLI_PATH, 'stdio']);
+      const child = spawn('node', [CLI_PATH, 'stdio'], {
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
       
       expect(child.pid).toBeDefined();
       
@@ -51,7 +55,7 @@ describe('CLI Basic Tests', () => {
       
       child.stdin?.write(testMessage);
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
       expect(response).toContain('"jsonrpc":"2.0"');
       expect(response).toContain('"result"');
@@ -60,7 +64,9 @@ describe('CLI Basic Tests', () => {
     });
 
     test('should accept http mode with port', async () => {
-      const child = spawn('node', [CLI_PATH, 'http', '--port', '3053']);
+      const child = spawn('node', [CLI_PATH, 'http', '--port', '3053'], {
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
       
       let output = '';
       let errorOutput = '';

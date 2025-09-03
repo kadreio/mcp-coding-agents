@@ -25,7 +25,7 @@ describe('Server Basic Tests', () => {
     // Start server
     serverProcess = spawn('node', [CLI_PATH, 'http', '--port', String(port)], {
       env: { ...process.env },
-      stdio: 'pipe'
+      stdio: ['pipe', 'pipe', 'pipe']
     });
 
     let serverStarted = false;
@@ -95,7 +95,7 @@ describe('Server Basic Tests', () => {
     // Start STDIO server
     serverProcess = spawn('node', [CLI_PATH, 'stdio'], {
       env: { ...process.env },
-      stdio: 'pipe'
+      stdio: ['pipe', 'pipe', 'pipe']
     });
 
     // Wait a moment for process to start
